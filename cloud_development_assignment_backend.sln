@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.13.35931.197 d17.13
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "cloud_development_assignment_backend", "cloud_development_assignment_backend\cloud_development_assignment_backend.csproj", "{ADA15EA4-0B97-43EB-8DDF-E91F8898BAB8}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{ADA15EA4-0B97-43EB-8DDF-E91F8898BAB8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ADA15EA4-0B97-43EB-8DDF-E91F8898BAB8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ADA15EA4-0B97-43EB-8DDF-E91F8898BAB8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ADA15EA4-0B97-43EB-8DDF-E91F8898BAB8}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {3ACA722A-5415-4F05-851B-AE1CD789F0CA}
+	EndGlobalSection
+EndGlobal
