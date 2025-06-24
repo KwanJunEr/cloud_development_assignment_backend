@@ -12,9 +12,11 @@ CREATE TABLE Users (
     phone VARCHAR(20) NOT NULL,
     specialization VARCHAR(255),
     hospital VARCHAR(255),
-    specialty VARCHAR(255),
     licenseNumber VARCHAR(255),
     patientId INT,
     relationship VARCHAR(100),
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+
+--Health Logging SQL -- 
