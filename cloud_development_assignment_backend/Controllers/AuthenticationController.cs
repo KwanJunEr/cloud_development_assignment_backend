@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using cloud_development_assignment_backend.Models;
 using cloud_development_assignment_backend.Data;
+using cloud_development_assignment_backend.DTO;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -18,7 +19,7 @@ namespace cloud_development_assignment_backend.Controllers
         }
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register(RegisterRequest request)
+        public async Task<IActionResult> Register(UserRequest request)
         {
             try
             {
