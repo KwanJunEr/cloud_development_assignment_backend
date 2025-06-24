@@ -30,6 +30,6 @@ namespace cloud_development_assignment_backend.Models
         public string LicenseNumber { get; set; }
         public int? PatientId { get; set; }
         public string Relationship { get; set; }
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow ;
     }
 }
