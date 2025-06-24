@@ -18,7 +18,8 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowNextJsFrontend",
         policy =>
         {
-            policy.WithOrigins("http://localhost:3000") // Change this to your Next.js app URL
+            policy.WithOrigins("http://localhost:3000",
+                    "https://localhost:3000") // Change this to your Next.js app URL
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         });
@@ -33,10 +34,12 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
-
 // Use CORS
 app.UseCors("AllowNextJsFrontend");
+
+//app.UseHttpsRedirection();
+//later wil add back
+
 
 app.UseAuthorization();
 
