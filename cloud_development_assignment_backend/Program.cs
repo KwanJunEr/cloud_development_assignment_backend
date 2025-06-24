@@ -1,10 +1,16 @@
+using Microsoft.EntityFrameworkCore;
+using cloud_development_assignment_backend.Data;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+
+
+// Register DbContext for SQL Server
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Add CORS to allow your Next.js frontend to connect
 builder.Services.AddCors(options =>
@@ -17,6 +23,7 @@ builder.Services.AddCors(options =>
                   .AllowAnyMethod();
         });
 });
+
 
 var app = builder.Build();
 
