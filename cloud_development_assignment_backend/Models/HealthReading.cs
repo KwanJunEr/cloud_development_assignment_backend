@@ -26,12 +26,12 @@ namespace cloud_development_assignment_backend.Models
         public DateTime Timestamp { get; set; }
 
         [Required]
-        public float BloodSugar { get; set; }
+        public double BloodSugar { get; set; }
 
         [Required]
-        public float InsulinDosage { get; set; }
+        public double InsulinDosage { get; set; }
 
-        public float? BodyWeight { get; set; }
+        public double? BodyWeight { get; set; }
 
         public int? SystolicBP { get; set; }
 

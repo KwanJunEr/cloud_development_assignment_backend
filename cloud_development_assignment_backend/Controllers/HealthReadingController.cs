@@ -62,5 +62,45 @@ namespace cloud_development_assignment_backend.Controllers
 
             }
         }
+
+        [HttpGet("user/{userId}")]
+        public IActionResult GetUserReadings(int userId)
+        {
+            try
+            {
+                var readings = _context.HealthReadings
+                    .Where(r => r.UserId == userId)
+                    .OrderByDescending(r => r.Timestamp)
+                    .ToList();
+
+                var dtoList = readings.Select(r => new HealthReadingOutputDto
+                {
+                    Id = r.Id,
+                    UserId = r.UserId,
+                    Date = r.Date.ToString("yyyy-MM-dd"),
+                    Time = r.Time.ToString(@"hh\:mm"),
+                    Timestamp = r.Timestamp,
+                    BloodSugar = r.BloodSugar,
+                    InsulinDosage = r.InsulinDosage,
+                    BodyWeight = r.BodyWeight,
+                    SystolicBP = r.SystolicBP,
+                    DiastolicBP = r.DiastolicBP,
+                    HeartRate = r.HeartRate,
+                    MealContext = r.MealContext,
+                    Notes = r.Notes,
+                    Status = r.Status
+                }).ToList();
+
+                return Ok(dtoList);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    error = "Failed to fetch readings.",
+                    details = ex.Message
+                });
+            }
+        }
     }
 }
