@@ -3,12 +3,16 @@ using cloud_development_assignment_backend.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using cloud_development_assignment_backend.Business;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
 builder.Services.AddControllers();
+
+// ? Register your custom business logic service
+builder.Services.AddScoped<HealhtLogBusinessLogic>();
 
 
 // Register DbContext for SQL Server
