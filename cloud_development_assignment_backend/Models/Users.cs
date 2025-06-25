@@ -25,11 +25,11 @@ namespace cloud_development_assignment_backend.Models
         [Required]
         public string Phone { get; set; }
 
-        public string Specialization { get; set; }
-        public string Hospital { get; set; }
-        public string LicenseNumber { get; set; }
+        public string? Specialization { get; set; }
+        public string? Hospital { get; set; }
+        public string? LicenseNumber { get; set; }
         public int? PatientId { get; set; }
-        public string Relationship { get; set; }
+        public string? Relationship { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow ;
     }
 }
