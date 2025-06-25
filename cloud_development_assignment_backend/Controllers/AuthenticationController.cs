@@ -96,7 +96,10 @@ namespace cloud_development_assignment_backend.Controllers
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.Role, user.Role)
+                new Claim(ClaimTypes.Role, user.Role),
+                new Claim("firstName", user.FirstName),
+                new Claim("lastName", user.LastName)
+
             };
 
             var token = new JwtSecurityToken(
