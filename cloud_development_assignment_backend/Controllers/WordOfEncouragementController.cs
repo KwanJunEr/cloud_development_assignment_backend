@@ -74,5 +74,44 @@ namespace cloud_development_assignment_backend.Controllers
                 return StatusCode(500, new { error = "Error retrieving patient info.", details = ex.Message });
             }
         }
+
+        [HttpGet("by-patient/{patientId}")]
+        public async Task<IActionResult> GetMessagesByPatientId(int patientId)
+        {
+            try
+            {
+                var messages = await _context.WordsofEncouragement
+                    .Where(m => m.PatientId == patientId)
+                    .Join(
+                        _context.Users,
+                        encouragement => encouragement.FamilyId,
+                        user => user.Id,
+                        (encouragement, user) => new
+                        {
+                            encouragement.Id,
+                            encouragement.PatientId,
+                            encouragement.FamilyId,
+                            encouragement.Content,
+                            encouragement.MessageDate,
+                            encouragement.MessageTime,
+                            encouragement.CreatedAt,
+                            FamilyName = user.FirstName + " " + user.LastName,
+                            Relationship = user.Relationship
+                        }
+                    )
+                    .OrderByDescending(m => m.CreatedAt)
+                    .ToListAsync();
+
+                return Ok(messages);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    error = "Error fetching messages.",
+                    details = ex.Message
+                });
+            }
+        }
     }
 }
