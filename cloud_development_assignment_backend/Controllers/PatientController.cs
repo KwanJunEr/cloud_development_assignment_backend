@@ -1,6 +1,9 @@
-﻿using cloud_development_assignment_backend.Models;
+﻿using cloud_development_assignment_backend.DTO;
+using cloud_development_assignment_backend.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using cloud_development_assignment_backend.Data;
 
 namespace cloud_development_assignment_backend.Controllers
 {
@@ -9,127 +12,124 @@ namespace cloud_development_assignment_backend.Controllers
     public class PatientController : ControllerBase
     {
         private readonly ILogger<PatientController> _logger;
-        // KCG: use a repository or service here
-        private static readonly List<Patient> _patients = new List<Patient>
-        {
-            // sample data
-            new Patient
-            {
-                Id = "p1",
-                Name = "John Doe",
-                Age = 45,
-                Gender = "Male",
-                Email = "john.doe@example.com",
-                Phone = "555-123-4567",
-                Address = "123 Main St, Anytown, USA",
-                DiabetesType = "Type 2",
-                DiagnosisDate = DateTime.Parse("2020-03-15"),
-                LatestA1c = 7.1,
-                EmergencyContact = "Jane Doe (Wife) - 555-123-4568",
-                Notes = "Patient is adhering well to treatment plan. Exercise routine needs improvement."
-            },
-            new Patient
-            {
-                Id = "p2",
-                Name = "Mary Smith",
-                Age = 38,
-                Gender = "Female",
-                Email = "mary.smith@example.com",
-                Phone = "555-987-6543",
-                Address = "456 Oak Ave, Somewhere, USA",
-                DiabetesType = "Type 1",
-                DiagnosisDate = DateTime.Parse("2010-06-22"),
-                LatestA1c = 6.8,
-                EmergencyContact = "Robert Smith (Husband) - 555-987-6544",
-                Notes = "Patient manages glucose levels well. Regular insulin adjustment is required."
-            }
-        };
+        private readonly AppDbContext _context;
 
-        public PatientController(ILogger<PatientController> logger)
+        public PatientController(AppDbContext context, ILogger<PatientController> logger)
         {
+            _context = context;
             _logger = logger;
         }
 
         // GET: api/Patient
         [HttpGet]
-        public ActionResult<IEnumerable<Patient>> GetAllPatients()
+        public ActionResult<IEnumerable<object>> GetAllPatients()
         {
             _logger.LogInformation("Getting all patients");
-            return Ok(_patients);
+            var patients = _context.PatientMedicalInfo
+                .Include(p => p.User)
+                .Select(p => new {
+                    p.PatientId,
+                    PatientName = p.User != null ? p.User.FirstName + " " + p.User.LastName : "",
+                    p.DiabetesType,
+                    p.DiagnosisDate,
+                    p.LastAppointment
+                })
+                .ToList();
+            return Ok(patients);
         }
 
-        // GET: api/Patient/5
+        // GET: api/Patient/{id}
         [HttpGet("{id}")]
-        public ActionResult<Patient> GetPatientById(string id)
+        public ActionResult<PatientOutputDto> GetPatientById(int id)
         {
-            _logger.LogInformation($"Getting patient with ID: {id}");
-            var patient = _patients.FirstOrDefault(p => p.Id == id);
-
+            var patient = _context.PatientMedicalInfo
+                .Include(p => p.User)
+                .FirstOrDefault(p => p.PatientId == id);
             if (patient == null)
-            {
-                _logger.LogWarning($"Patient with ID {id} not found");
                 return NotFound();
-            }
 
-            return Ok(patient);
+            var output = new PatientOutputDto
+            {
+                PatientId = patient.PatientId,
+                PatientName = patient.User != null ? patient.User.FirstName + " " + patient.User.LastName : "",
+                DiabetesType = patient.DiabetesType,
+                DiagnosisDate = patient.DiagnosisDate,
+                LastAppointment = patient.LastAppointment
+            };
+            return Ok(output);
         }
 
         // POST: api/Patient
         [HttpPost]
-        public ActionResult<Patient> CreatePatient(Patient patient)
+        public ActionResult<PatientOutputDto> CreatePatient(PatientDto dto)
         {
-            if (patient == null)
+            if (dto == null)
             {
                 return BadRequest("Patient data is null");
             }
 
-            if (string.IsNullOrEmpty(patient.Name) ||
-                string.IsNullOrEmpty(patient.Gender) ||
-                string.IsNullOrEmpty(patient.DiabetesType))
+            // Only require PatientId
+            if (dto.PatientId == 0)
             {
-                return BadRequest("Name, Gender, and DiabetesType are required fields");
+                return BadRequest("PatientId is required");
             }
 
-            if (string.IsNullOrEmpty(patient.Id))
+            // Link to existing user
+            var user = _context.Users.FirstOrDefault(u => u.Id == dto.PatientId);
+            if (user == null)
             {
-                patient.Id = $"p{Guid.NewGuid().ToString().Substring(0, 8)}";
+                return BadRequest("User with the given PatientId does not exist");
             }
 
-            _patients.Add(patient);
-            _logger.LogInformation($"Created new patient with ID: {patient.Id}");
+            var patient = new Patient
+            {
+                PatientId = dto.PatientId,
+                DiabetesType = dto.DiabetesType,
+                DiagnosisDate = dto.DiagnosisDate,
+                LastAppointment = dto.LastAppointment
+            };
 
-            return CreatedAtAction(nameof(GetPatientById), new { id = patient.Id }, patient);
+            _context.PatientMedicalInfo.Add(patient);
+            _context.SaveChanges();
+            _logger.LogInformation($"Created new patient with ID: {patient.PatientId}");
+
+            // Return PatientOutputDto with PatientName from User
+            var output = new PatientOutputDto
+            {
+                PatientId = patient.PatientId,
+                PatientName = user.FirstName + " " + user.LastName,
+                DiabetesType = patient.DiabetesType,
+                DiagnosisDate = patient.DiagnosisDate,
+                LastAppointment = patient.LastAppointment
+            };
+
+            return CreatedAtAction(nameof(GetPatientById), new { id = patient.PatientId }, output);
         }
 
         // PUT: api/Patient/5
         [HttpPut("{id}")]
-        public IActionResult UpdatePatient(string id, Patient patient)
+        public IActionResult UpdatePatientInfo(int id, [FromBody] PatientDto dto)
         {
-            if (patient == null || id != patient.Id)
-            {
-                return BadRequest("Invalid patient data or ID mismatch");
-            }
+            if (dto == null || dto.PatientId != id)
+                return BadRequest("Invalid data");
 
-            var existingPatient = _patients.FirstOrDefault(p => p.Id == id);
-
-            if (existingPatient == null)
-            {
-                _logger.LogWarning($"Attempted to update non-existent patient with ID: {id}");
+            var patient = _context.PatientMedicalInfo.FirstOrDefault(p => p.PatientId == id);
+            if (patient == null)
                 return NotFound();
-            }
 
-            var index = _patients.IndexOf(existingPatient);
-            _patients[index] = patient;
-            _logger.LogInformation($"Updated patient with ID: {id}");
+            // Only update allowed fields
+            patient.DiagnosisDate = dto.DiagnosisDate;
+            patient.DiabetesType = dto.DiabetesType;
 
+            _context.SaveChanges();
             return NoContent();
         }
 
         // DELETE: api/Patient/5
         [HttpDelete("{id}")]
-        public IActionResult DeletePatient(string id)
+        public IActionResult DeletePatient(int id)
         {
-            var patient = _patients.FirstOrDefault(p => p.Id == id);
+            var patient = _context.PatientMedicalInfo.FirstOrDefault(p => p.PatientId == id);
 
             if (patient == null)
             {
@@ -137,7 +137,8 @@ namespace cloud_development_assignment_backend.Controllers
                 return NotFound();
             }
 
-            _patients.Remove(patient);
+            _context.PatientMedicalInfo.Remove(patient);
+            _context.SaveChanges();
             _logger.LogInformation($"Deleted patient with ID: {id}");
 
             return NoContent();
@@ -145,22 +146,30 @@ namespace cloud_development_assignment_backend.Controllers
 
         // GET: api/Patient/search?searchTerm=Smith
         [HttpGet("search")]
-        public ActionResult<IEnumerable<Patient>> SearchPatients([FromQuery] string searchTerm)
+        public ActionResult<IEnumerable<object>> SearchPatients([FromQuery] string searchTerm)
         {
             if (string.IsNullOrEmpty(searchTerm))
             {
                 return BadRequest("Search term is required");
             }
 
-            var matchingPatients = _patients
-                .Where(p => p.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+            var matchingPatients = _context.PatientMedicalInfo
+                .Include(p => p.User)
+                .Where(p => (p.User.FirstName + " " + p.User.LastName).Contains(searchTerm))
+                .Select(p => new {
+                    p.PatientId,
+                    PatientName = p.User.FirstName + " " + p.User.LastName,
+                    p.DiabetesType,
+                    p.DiagnosisDate,
+                    p.LastAppointment
+                })
                 .ToList();
 
             _logger.LogInformation($"Searched for patients with term: {searchTerm}, found {matchingPatients.Count} matches");
             return Ok(matchingPatients);
         }
 
-        // GET: api/Patient/filter?diabetesType=Type1
+        // GET: api/Patient/filter?diabetesType=Type 1
         [HttpGet("filter")]
         public ActionResult<IEnumerable<Patient>> FilterPatientsByDiabetesType([FromQuery] string diabetesType)
         {
@@ -169,8 +178,8 @@ namespace cloud_development_assignment_backend.Controllers
                 return BadRequest("Diabetes type is required");
             }
 
-            var filteredPatients = _patients
-                .Where(p => p.DiabetesType.Equals(diabetesType, StringComparison.OrdinalIgnoreCase))
+            var filteredPatients = _context.PatientMedicalInfo
+                .Where(p => p.DiabetesType == diabetesType)
                 .ToList();
 
             _logger.LogInformation($"Filtered patients by diabetes type: {diabetesType}, found {filteredPatients.Count} matches");

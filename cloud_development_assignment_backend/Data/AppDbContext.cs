@@ -14,5 +14,6 @@ namespace cloud_development_assignment_backend.Data
 
         public DbSet<FollowUp> FollowUps { get; set; }
 
+        public DbSet<Patient> PatientMedicalInfo { get; set; }
     }
 }
