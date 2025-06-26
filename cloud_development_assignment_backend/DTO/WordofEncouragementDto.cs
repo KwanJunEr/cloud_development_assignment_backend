@@ -13,3 +13,4 @@ namespace cloud_development_assignment_backend.DTO
         [Required]
         public string Content { get; set; } = null!;
     }
+}
