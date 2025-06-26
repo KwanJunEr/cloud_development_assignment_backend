@@ -1,6 +1,10 @@
 ﻿using cloud_development_assignment_backend.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Cors;
+using cloud_development_assignment_backend.DTO;
+using cloud_development_assignment_backend.Data;
+using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
 namespace cloud_development_assignment_backend.Controllers
 {
@@ -9,165 +13,179 @@ namespace cloud_development_assignment_backend.Controllers
     public class TreatmentPlanController : ControllerBase
     {
         private readonly ILogger<TreatmentPlanController> _logger;
-        // KCG: use a repository or service here
-        private static readonly List<TreatmentPlan> _treatmentPlans = new List<TreatmentPlan>();
+        private readonly AppDbContext _context;
 
-        public TreatmentPlanController(ILogger<TreatmentPlanController> logger)
+        public TreatmentPlanController(AppDbContext context, ILogger<TreatmentPlanController> logger)
         {
+            _context = context;
             _logger = logger;
-
-            // Initialize with sample data if empty
-            // KCG: remove when real data ready
-            if (!_treatmentPlans.Any())
-            {
-                // Sample data for John Doe (p1)
-                _treatmentPlans.Add(new TreatmentPlan
-                {
-                    Id = "tp1",
-                    PatientId = "p1",
-                    Date = DateTime.Parse("2023-10-15"),
-                    Diagnosis = "Type 2 Diabetes with poor glycemic control",
-                    TreatmentGoals = "Improve HbA1c to <7% within 3 months",
-                    DietaryRecommendations = "Low carbohydrate diet, limit to 45g per meal",
-                    ExerciseRecommendations = "30 minutes of walking daily",
-                    MedicationNotes = "Continue Metformin 500mg twice daily",
-                    FollowUpDate = DateTime.Parse("2023-11-15"),
-                    CreatedBy = "Dr. Smith",
-                    CreatedAt = DateTime.Parse("2023-10-15")
-                });
-
-                // Sample data for Mary Smith (p2)
-                _treatmentPlans.Add(new TreatmentPlan
-                {
-                    Id = "tp2",
-                    PatientId = "p2",
-                    Date = DateTime.Parse("2023-09-20"),
-                    Diagnosis = "Type 1 Diabetes, well-controlled",
-                    TreatmentGoals = "Maintain current glycemic control, prevent complications",
-                    DietaryRecommendations = "Carbohydrate counting, 60g per meal",
-                    ExerciseRecommendations = "Regular moderate exercise 5x weekly with proper insulin adjustment",
-                    MedicationNotes = "Insulin regimen: Lantus 20 units at bedtime, Novolog with meals based on carb counting",
-                    FollowUpDate = DateTime.Parse("2023-10-20"),
-                    CreatedBy = "Dr. Johnson",
-                    CreatedAt = DateTime.Parse("2023-09-20")
-                });
-            }
         }
 
         // GET: api/TreatmentPlan
         [HttpGet]
-        public ActionResult<IEnumerable<TreatmentPlan>> GetAllTreatmentPlans()
+        public ActionResult<IEnumerable<TreatmentPlanOutputDto>> GetAllTreatmentPlans()
         {
-            return Ok(_treatmentPlans);
+            var result = _context.TreatmentPlans
+                .Select(tp => new TreatmentPlanOutputDto
+                {
+                    Id = tp.Id,
+                    PatientId = tp.PatientId,
+                    Date = tp.Date,
+                    Diagnosis = tp.Diagnosis,
+                    TreatmentGoals = tp.TreatmentGoals,
+                    DietaryRecommendations = tp.DietaryRecommendations,
+                    ExerciseRecommendations = tp.ExerciseRecommendations,
+                    MedicationNotes = tp.MedicationNotes,
+                    FollowUpDate = tp.FollowUpDate,
+                    CreatedBy = tp.CreatedBy,
+                    CreatedAt = tp.CreatedAt,
+                    UpdatedAt = tp.UpdatedAt
+                }).ToList();
+            return Ok(result);
         }
 
         // GET: api/TreatmentPlan/5
         [HttpGet("{id}")]
-        public ActionResult<TreatmentPlan> GetTreatmentPlanById(string id)
+        public ActionResult<TreatmentPlanOutputDto> GetTreatmentPlanById(int id)
         {
-            var treatmentPlan = _treatmentPlans.FirstOrDefault(p => p.Id == id);
-
-            if (treatmentPlan == null)
-            {
+            var tp = _context.TreatmentPlans.FirstOrDefault(p => p.Id == id);
+            if (tp == null)
                 return NotFound();
-            }
-
-            return Ok(treatmentPlan);
+            var dto = new TreatmentPlanOutputDto
+            {
+                Id = tp.Id,
+                PatientId = tp.PatientId,
+                Date = tp.Date,
+                Diagnosis = tp.Diagnosis,
+                TreatmentGoals = tp.TreatmentGoals,
+                DietaryRecommendations = tp.DietaryRecommendations,
+                ExerciseRecommendations = tp.ExerciseRecommendations,
+                MedicationNotes = tp.MedicationNotes,
+                FollowUpDate = tp.FollowUpDate,
+                CreatedBy = tp.CreatedBy,
+                CreatedAt = tp.CreatedAt,
+                UpdatedAt = tp.UpdatedAt
+            };
+            return Ok(dto);
         }
 
         // GET: api/TreatmentPlan/patient/5
         [HttpGet("patient/{patientId}")]
-        public ActionResult<IEnumerable<TreatmentPlan>> GetTreatmentPlansByPatientId(string patientId)
+        public ActionResult<IEnumerable<TreatmentPlanOutputDto>> GetTreatmentPlansByPatientId(int patientId)
         {
-            if (string.IsNullOrEmpty(patientId))
-            {
-                return BadRequest("Patient ID is required");
-            }
-
-            var plans = _treatmentPlans
+            var plans = _context.TreatmentPlans
                 .Where(p => p.PatientId == patientId)
                 .OrderByDescending(p => p.Date)
+                .Select(tp => new TreatmentPlanOutputDto
+                {
+                    Id = tp.Id,
+                    PatientId = tp.PatientId,
+                    Date = tp.Date,
+                    Diagnosis = tp.Diagnosis,
+                    TreatmentGoals = tp.TreatmentGoals,
+                    DietaryRecommendations = tp.DietaryRecommendations,
+                    ExerciseRecommendations = tp.ExerciseRecommendations,
+                    MedicationNotes = tp.MedicationNotes,
+                    FollowUpDate = tp.FollowUpDate,
+                    CreatedBy = tp.CreatedBy,
+                    CreatedAt = tp.CreatedAt,
+                    UpdatedAt = tp.UpdatedAt
+                })
                 .ToList();
-
             return Ok(plans);
         }
 
         // POST: api/TreatmentPlan
         [HttpPost]
-        public ActionResult<TreatmentPlan> CreateTreatmentPlan(TreatmentPlan treatmentPlan)
+        public ActionResult<TreatmentPlanOutputDto> CreateTreatmentPlan([FromBody] TreatmentPlanDto dto)
         {
-            if (treatmentPlan == null)
-            {
+            if (dto == null)
                 return BadRequest();
-            }
-
-            if (string.IsNullOrEmpty(treatmentPlan.PatientId) ||
-                string.IsNullOrEmpty(treatmentPlan.Diagnosis) ||
-                string.IsNullOrEmpty(treatmentPlan.TreatmentGoals))
-            {
+            if (dto.PatientId == 0 || string.IsNullOrEmpty(dto.Diagnosis) || string.IsNullOrEmpty(dto.TreatmentGoals))
                 return BadRequest("PatientId, Diagnosis, and TreatmentGoals are required fields");
-            }
 
-            if (string.IsNullOrEmpty(treatmentPlan.Id))
+            DateTime? followUpDate = dto.FollowUpDate;
+            if (dto.FollowUpDate == default || (dto.FollowUpDate is DateTime dt && dt == DateTime.MinValue))
+                followUpDate = null;
+
+            var treatmentPlan = new TreatmentPlan
             {
-                treatmentPlan.Id = Guid.NewGuid().ToString();
-            }
-
-            if (treatmentPlan.CreatedAt == default)
-            {
-                treatmentPlan.CreatedAt = DateTime.UtcNow;
-            }
-
-            if (treatmentPlan.Date == default)
-            {
-                treatmentPlan.Date = DateTime.UtcNow;
-            }
-
-            _treatmentPlans.Add(treatmentPlan);
-
+                PatientId = dto.PatientId,
+                Date = dto.Date,
+                Diagnosis = dto.Diagnosis,
+                TreatmentGoals = dto.TreatmentGoals,
+                DietaryRecommendations = dto.DietaryRecommendations,
+                ExerciseRecommendations = dto.ExerciseRecommendations,
+                MedicationNotes = dto.MedicationNotes,
+                FollowUpDate = followUpDate ?? default,
+                CreatedBy = dto.CreatedBy,
+                CreatedAt = DateTime.UtcNow
+            };
+            _context.TreatmentPlans.Add(treatmentPlan);
+            _context.SaveChanges();
             _logger.LogInformation($"Created treatment plan {treatmentPlan.Id} for patient {treatmentPlan.PatientId}");
 
-            return CreatedAtAction(nameof(GetTreatmentPlanById), new { id = treatmentPlan.Id }, treatmentPlan);
+            var outputDto = new TreatmentPlanOutputDto
+            {
+                Id = treatmentPlan.Id,
+                PatientId = treatmentPlan.PatientId,
+                Date = treatmentPlan.Date,
+                Diagnosis = treatmentPlan.Diagnosis,
+                TreatmentGoals = treatmentPlan.TreatmentGoals,
+                DietaryRecommendations = treatmentPlan.DietaryRecommendations,
+                ExerciseRecommendations = treatmentPlan.ExerciseRecommendations,
+                MedicationNotes = treatmentPlan.MedicationNotes,
+                FollowUpDate = treatmentPlan.FollowUpDate,
+                CreatedBy = treatmentPlan.CreatedBy,
+                CreatedAt = treatmentPlan.CreatedAt,
+                UpdatedAt = treatmentPlan.UpdatedAt
+            };
+            return CreatedAtAction(nameof(GetTreatmentPlanById), new { id = treatmentPlan.Id }, outputDto);
         }
 
         // PUT: api/TreatmentPlan/5
         [HttpPut("{id}")]
-        public IActionResult UpdateTreatmentPlan(string id, TreatmentPlan treatmentPlan)
+        public IActionResult UpdateTreatmentPlan(int id, TreatmentPlanDto dto)
         {
-            if (treatmentPlan == null || id != treatmentPlan.Id)
-            {
+            if (dto == null)
                 return BadRequest();
-            }
-
-            var existingPlan = _treatmentPlans.FirstOrDefault(p => p.Id == id);
-
+            var existingPlan = _context.TreatmentPlans.FirstOrDefault(p => p.Id == id);
             if (existingPlan == null)
-            {
                 return NotFound();
-            }
 
-            treatmentPlan.UpdatedAt = DateTime.UtcNow;
+            DateTime? followUpDate = dto.FollowUpDate;
+            if (dto.FollowUpDate == default || (dto.FollowUpDate is DateTime dt && dt == DateTime.MinValue))
+                followUpDate = null;
 
-            var index = _treatmentPlans.IndexOf(existingPlan);
-            _treatmentPlans[index] = treatmentPlan;
+            existingPlan.PatientId = dto.PatientId;
+            existingPlan.Date = dto.Date;
+            existingPlan.Diagnosis = dto.Diagnosis;
+            existingPlan.TreatmentGoals = dto.TreatmentGoals;
+            existingPlan.DietaryRecommendations = dto.DietaryRecommendations;
+            existingPlan.ExerciseRecommendations = dto.ExerciseRecommendations;
+            existingPlan.MedicationNotes = dto.MedicationNotes;
+            existingPlan.FollowUpDate = followUpDate ?? existingPlan.FollowUpDate;
+            existingPlan.CreatedBy = dto.CreatedBy;
+            existingPlan.UpdatedAt = DateTime.UtcNow;
 
-            _logger.LogInformation($"Updated treatment plan {id} for patient {treatmentPlan.PatientId}");
-
+            _context.SaveChanges();
+            _logger.LogInformation($"Updated treatment plan {id} for patient {existingPlan.PatientId}");
             return NoContent();
         }
 
         // DELETE: api/TreatmentPlan/5
         [HttpDelete("{id}")]
-        public IActionResult DeleteTreatmentPlan(string id)
+        public IActionResult DeleteTreatmentPlan(int id)
         {
-            var plan = _treatmentPlans.FirstOrDefault(p => p.Id == id);
+            var plan = _context.TreatmentPlans.FirstOrDefault(p => p.Id == id);
 
             if (plan == null)
             {
                 return NotFound();
             }
 
-            _treatmentPlans.Remove(plan);
+            _context.TreatmentPlans.Remove(plan);
+            _context.SaveChanges();
 
             _logger.LogInformation($"Deleted treatment plan {id}");
 
@@ -178,7 +196,6 @@ namespace cloud_development_assignment_backend.Controllers
         [HttpGet("recommendations")]
         public ActionResult<object> GetTreatmentRecommendations()
         {
-            // Standard recommendations for diabetes patients
             var recommendations = new
             {
                 Dietary = new List<string>
