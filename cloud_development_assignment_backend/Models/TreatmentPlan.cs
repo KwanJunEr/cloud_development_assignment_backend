@@ -30,8 +30,7 @@ namespace cloud_development_assignment_backend.Models
 
         public DateTime FollowUpDate { get; set; }
 
-        [Required]
-        public string CreatedBy { get; set; }
+        public string? CreatedBy { get; set; }
 
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

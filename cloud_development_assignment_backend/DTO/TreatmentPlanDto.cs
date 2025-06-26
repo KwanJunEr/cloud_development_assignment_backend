@@ -12,6 +12,6 @@ namespace cloud_development_assignment_backend.DTO
         public string? ExerciseRecommendations { get; set; }
         public string? MedicationNotes { get; set; }
         public DateTime? FollowUpDate { get; set; }
-        public string CreatedBy { get; set; }
+        public string? CreatedBy { get; set; }
     }
 }

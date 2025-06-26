@@ -104,6 +104,8 @@ namespace cloud_development_assignment_backend.Controllers
             if (dto.PatientId == 0 || string.IsNullOrEmpty(dto.Diagnosis) || string.IsNullOrEmpty(dto.TreatmentGoals))
                 return BadRequest("PatientId, Diagnosis, and TreatmentGoals are required fields");
 
+            var createdBy = User.Identity?.Name;
+
             DateTime? followUpDate = dto.FollowUpDate;
             if (dto.FollowUpDate == default || (dto.FollowUpDate is DateTime dt && dt == DateTime.MinValue))
                 followUpDate = null;
@@ -118,7 +120,7 @@ namespace cloud_development_assignment_backend.Controllers
                 ExerciseRecommendations = dto.ExerciseRecommendations,
                 MedicationNotes = dto.MedicationNotes,
                 FollowUpDate = followUpDate ?? default,
-                CreatedBy = dto.CreatedBy,
+                CreatedBy = createdBy ?? "Unknown",
                 CreatedAt = DateTime.UtcNow
             };
             _context.TreatmentPlans.Add(treatmentPlan);
