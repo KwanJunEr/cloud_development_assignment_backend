@@ -28,6 +28,10 @@ namespace cloud_development_assignment_backend.Models
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+        [Required]
+        [MaxLength(200)]
+        public string Status { get; set; } = "available";
+
         [ForeignKey(nameof(ProviderId))]
         public User User { get; set; } = null!;// Navigation property
     }

@@ -13,5 +13,7 @@ namespace cloud_development_assignment_backend.DTO
         public TimeSpan EndTime { get; set; }
 
         public string? Notes { get; set; }
+
+        public string Status { get; set; } = "available"; // NEW
     }
 }

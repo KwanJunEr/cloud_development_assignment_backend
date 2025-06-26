@@ -22,7 +22,7 @@ namespace cloud_development_assignment_backend.Controllers
             {
                 var availability = await _context.ProviderAvailabilities
                     .Include(p => p.User)
-                    .Where(p => p.ProviderId == id) // ← This filters by ProviderId (doctor/dietician)
+                    .Where(p => p.ProviderId == id && p.Status == "available") // ← This filters by ProviderId (doctor/dietician)
                     .ToListAsync();
                 if (availability == null)
                     return NotFound($"Availability with ID {id} not found.");
@@ -46,7 +46,8 @@ namespace cloud_development_assignment_backend.Controllers
                     AvailabilityDate = dto.AvailabilityDate.Date,
                     StartTime = dto.StartTime,
                     EndTime = dto.EndTime,
-                    Notes = dto.Notes
+                    Notes = dto.Notes,
+                    Status = dto.Status 
                 };
 
                 _context.ProviderAvailabilities.Add(availability);
@@ -73,6 +74,7 @@ namespace cloud_development_assignment_backend.Controllers
                 availability.StartTime = dto.StartTime;
                 availability.EndTime = dto.EndTime;
                 availability.Notes = dto.Notes;
+                availability.Status = dto.Status;
 
                 await _context.SaveChangesAsync();
                 return NoContent();
