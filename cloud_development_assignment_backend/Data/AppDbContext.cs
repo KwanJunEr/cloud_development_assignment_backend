@@ -24,5 +24,7 @@ namespace cloud_development_assignment_backend.Data
 
         public DbSet<MealEntry> MealEntries { get; set; }
 
+        public DbSet<MedicationReminder> MedicationReminders { get; set; }
+
     }
 }
