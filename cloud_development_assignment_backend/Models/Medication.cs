@@ -1,14 +1,15 @@
-﻿// In Medication.cs
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace cloud_development_assignment_backend.Models
 {
     public class Medication
     {
-        [Required]
-        public string Id { get; set; }
+        [Key]
+        public int Id { get; set; }
 
-        public string PrescriptionId { get; set; }
+        [Required]
+        public int PrescriptionId { get; set; }
 
         [Required]
         public string Name { get; set; }
@@ -21,7 +22,7 @@ namespace cloud_development_assignment_backend.Models
 
         public string Duration { get; set; }
 
-        public string Notes { get; set; }
+        public string? Notes { get; set; }
 
         public DateTime StartDate { get; set; }
 
@@ -33,7 +34,9 @@ namespace cloud_development_assignment_backend.Models
 
         public DateTime? UpdatedAt { get; set; }
 
-        // Navigation property 
-        public Prescription Prescription { get; set; }
+        [ForeignKey("PrescriptionId")]
+        public Prescription? Prescription { get; set; }
     }
+
+    // DTOs are defined in Prescription.cs
 }
