@@ -1,6 +1,9 @@
 ﻿using cloud_development_assignment_backend.Models;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
+using cloud_development_assignment_backend.DTO;
+using Microsoft.EntityFrameworkCore;
+using cloud_development_assignment_backend.Data;
 
 namespace cloud_development_assignment_backend.Controllers
 {
@@ -9,169 +12,99 @@ namespace cloud_development_assignment_backend.Controllers
     public class PrescriptionController : ControllerBase
     {
         private readonly ILogger<PrescriptionController> _logger;
-        // KCG:use a repository or service here
-        private static readonly List<Prescription> _prescriptions = new List<Prescription>();
+        private readonly AppDbContext _context;
 
-        public PrescriptionController(ILogger<PrescriptionController> logger)
+        public PrescriptionController(AppDbContext context, ILogger<PrescriptionController> logger)
         {
+            _context = context;
             _logger = logger;
-
-            // Initialize with sample data if empty
-            // KCG: jsut for demo , remove if  real data
-            if (!_prescriptions.Any())
-            {
-                // Sample data for John Doe (p1)
-                var p1Prescription1 = new Prescription
-                {
-                    Id = "presc1",
-                    PatientId = "p1",
-                    Date = DateTime.Parse("2023-11-15"),
-                    Notes = "Patient reports good compliance with medication regimen",
-                    PhysicianId = "phy1",
-                    PhysicianName = "Dr. Smith",
-                    IsActive = true,
-                    CreatedAt = DateTime.Parse("2023-11-15")
-                };
-
-                p1Prescription1.Medications = new List<Medication>
-                {
-                    new Medication
-                    {
-                        Id = "med1",
-                        PrescriptionId = "presc1",
-                        Name = "Metformin",
-                        Dosage = "500mg",
-                        Frequency = "Twice daily with meals",
-                        Duration = "90 days",
-                        Notes = "Take with food to reduce GI side effects",
-                        StartDate = DateTime.Parse("2023-11-15"),
-                        CreatedAt = DateTime.Parse("2023-11-15"),
-                        IsActive = true
-                    },
-                    new Medication
-                    {
-                        Id = "med2",
-                        PrescriptionId = "presc1",
-                        Name = "Lisinopril",
-                        Dosage = "10mg",
-                        Frequency = "Once daily",
-                        Duration = "90 days",
-                        Notes = "For blood pressure control",
-                        StartDate = DateTime.Parse("2023-11-15"),
-                        CreatedAt = DateTime.Parse("2023-11-15"),
-                        IsActive = true
-                    }
-                };
-
-                _prescriptions.Add(p1Prescription1);
-
-                // Another prescription for John Doe (p1) - older one
-                // KCG: remove if real data
-                var p1Prescription2 = new Prescription
-                {
-                    Id = "presc2",
-                    PatientId = "p1",
-                    Date = DateTime.Parse("2023-08-15"),
-                    Notes = "Initial prescription after diagnosis",
-                    PhysicianId = "phy1",
-                    PhysicianName = "Dr. Smith",
-                    IsActive = false,
-                    CreatedAt = DateTime.Parse("2023-08-15")
-                };
-
-                p1Prescription2.Medications = new List<Medication>
-                {
-                    new Medication
-                    {
-                        Id = "med3",
-                        PrescriptionId = "presc2",
-                        Name = "Metformin",
-                        Dosage = "250mg",
-                        Frequency = "Twice daily with meals",
-                        Duration = "30 days",
-                        Notes = "Starter dose, will increase if tolerated well",
-                        StartDate = DateTime.Parse("2023-08-15"),
-                        EndDate = DateTime.Parse("2023-09-15"),
-                        CreatedAt = DateTime.Parse("2023-08-15"),
-                        IsActive = false
-                    }
-                };
-
-                _prescriptions.Add(p1Prescription2);
-
-                // Sample data for Mary Smith (p2)
-                var p2Prescription = new Prescription
-                {
-                    Id = "presc3",
-                    PatientId = "p2",
-                    Date = DateTime.Parse("2023-11-10"),
-                    Notes = "Adjusted insulin dosage based on latest glucose readings",
-                    PhysicianId = "phy2",
-                    PhysicianName = "Dr. Johnson",
-                    IsActive = true,
-                    CreatedAt = DateTime.Parse("2023-11-10")
-                };
-
-                p2Prescription.Medications = new List<Medication>
-                {
-                    new Medication
-                    {
-                        Id = "med4",
-                        PrescriptionId = "presc3",
-                        Name = "Lantus",
-                        Dosage = "20 units",
-                        Frequency = "Once daily at bedtime",
-                        Duration = "30 days",
-                        Notes = "Long-acting insulin",
-                        StartDate = DateTime.Parse("2023-11-10"),
-                        CreatedAt = DateTime.Parse("2023-11-10"),
-                        IsActive = true
-                    },
-                    new Medication
-                    {
-                        Id = "med5",
-                        PrescriptionId = "presc3",
-                        Name = "Novolog",
-                        Dosage = "Based on carb count",
-                        Frequency = "Before meals",
-                        Duration = "30 days",
-                        Notes = "Rapid-acting insulin, 1 unit per 10g of carbs",
-                        StartDate = DateTime.Parse("2023-11-10"),
-                        CreatedAt = DateTime.Parse("2023-11-10"),
-                        IsActive = true
-                    }
-                };
-
-                _prescriptions.Add(p2Prescription);
-            }
         }
 
         // GET: api/Prescription
         [HttpGet]
-        public ActionResult<IEnumerable<Prescription>> GetAllPrescriptions()
+        public ActionResult<IEnumerable<PrescriptionOutputDto>> GetAllPrescriptions()
         {
             _logger.LogInformation("Getting all prescriptions");
-            return Ok(_prescriptions);
+            var prescriptions = _context.Prescriptions
+                .Include(p => p.Medications)
+                .ToList();
+
+            var result = prescriptions.Select(p => new PrescriptionOutputDto
+            {
+                Id = p.Id,
+                PatientId = p.PatientId,
+                Date = p.Date,
+                Notes = p.Notes,
+                PhysicianId = p.PhysicianId,
+                IsActive = p.IsActive,
+                CreatedAt = p.CreatedAt,
+                UpdatedAt = p.UpdatedAt,
+                Medications = p.Medications.Select(m => new MedicationOutputDto
+                {
+                    Id = m.Id,
+                    PrescriptionId = m.PrescriptionId,
+                    Name = m.Name,
+                    Dosage = m.Dosage,
+                    Frequency = m.Frequency,
+                    Duration = m.Duration,
+                    Notes = m.Notes,
+                    StartDate = m.StartDate,
+                    EndDate = m.EndDate,
+                    IsActive = m.IsActive,
+                    CreatedAt = m.CreatedAt,
+                    UpdatedAt = m.UpdatedAt
+                }).ToList()
+            }).ToList();
+            return Ok(result);
         }
 
         // GET: api/Prescription/{id}
         [HttpGet("{id}")]
-        public ActionResult<Prescription> GetPrescriptionById(string id)
+        public ActionResult<PrescriptionOutputDto> GetPrescriptionById(string id)
         {
             _logger.LogInformation($"Getting prescription with ID: {id}");
-            var prescription = _prescriptions.FirstOrDefault(p => p.Id == id);
+            var p = _context.Prescriptions
+                .Include(x => x.Medications)
+                .FirstOrDefault(p => p.Id.ToString() == id);
 
-            if (prescription == null)
+            if (p == null)
             {
                 return NotFound();
             }
 
-            return Ok(prescription);
+            var dto = new PrescriptionOutputDto
+            {
+                Id = p.Id,
+                PatientId = p.PatientId,
+                Date = p.Date,
+                Notes = p.Notes,
+                PhysicianId = p.PhysicianId,
+                IsActive = p.IsActive,
+                CreatedAt = p.CreatedAt,
+                UpdatedAt = p.UpdatedAt,
+                Medications = p.Medications.Select(m => new MedicationOutputDto
+                {
+                    Id = m.Id,
+                    PrescriptionId = m.PrescriptionId,
+                    Name = m.Name,
+                    Dosage = m.Dosage,
+                    Frequency = m.Frequency,
+                    Duration = m.Duration,
+                    Notes = m.Notes,
+                    StartDate = m.StartDate,
+                    EndDate = m.EndDate,
+                    IsActive = m.IsActive,
+                    CreatedAt = m.CreatedAt,
+                    UpdatedAt = m.UpdatedAt
+                }).ToList()
+            };
+
+            return Ok(dto);
         }
 
         // GET: api/Prescription/patient/{patientId}
         [HttpGet("patient/{patientId}")]
-        public ActionResult<IEnumerable<Prescription>> GetPrescriptionsByPatientId(string patientId)
+        public ActionResult<IEnumerable<PrescriptionOutputDto>> GetPrescriptionsByPatientId(string patientId)
         {
             _logger.LogInformation($"Getting prescriptions for patient ID: {patientId}");
             if (string.IsNullOrEmpty(patientId))
@@ -179,96 +112,166 @@ namespace cloud_development_assignment_backend.Controllers
                 return BadRequest("Patient ID is required");
             }
 
-            var prescriptions = _prescriptions
-                .Where(p => p.PatientId == patientId)
+            var prescriptions = _context.Prescriptions
+                .Include(p => p.Medications)
+                .Where(p => p.PatientId.ToString() == patientId)
                 .OrderByDescending(p => p.Date)
                 .ToList();
 
-            return Ok(prescriptions);
+            var result = prescriptions.Select(p => new PrescriptionOutputDto
+            {
+                Id = p.Id,
+                PatientId = p.PatientId,
+                Date = p.Date,
+                Notes = p.Notes,
+                PhysicianId = p.PhysicianId,
+                IsActive = p.IsActive,
+                CreatedAt = p.CreatedAt,
+                UpdatedAt = p.UpdatedAt,
+                Medications = p.Medications.Select(m => new MedicationOutputDto
+                {
+                    Id = m.Id,
+                    PrescriptionId = m.PrescriptionId,
+                    Name = m.Name,
+                    Dosage = m.Dosage,
+                    Frequency = m.Frequency,
+                    Duration = m.Duration,
+                    Notes = m.Notes,
+                    StartDate = m.StartDate,
+                    EndDate = m.EndDate,
+                    IsActive = m.IsActive,
+                    CreatedAt = m.CreatedAt,
+                    UpdatedAt = m.UpdatedAt
+                }).ToList()
+            }).ToList();
+
+            return Ok(result);
         }
 
         // POST: api/Prescription
         [HttpPost]
-        public ActionResult<Prescription> CreatePrescription(Prescription prescription)
+        public ActionResult<PrescriptionOutputDto> CreatePrescription(PrescriptionDto dto)
         {
-            _logger.LogInformation($"Creating prescription: {JsonSerializer.Serialize(prescription)}");
-            if (prescription == null)
+            _logger.LogInformation($"Creating prescription: {JsonSerializer.Serialize(dto)}");
+            if (dto == null)
             {
                 return BadRequest("Prescription data is required");
             }
 
-            if (string.IsNullOrEmpty(prescription.PatientId))
+            if (dto.PatientId == 0)
             {
                 return BadRequest("PatientId is a required field");
             }
 
-            if (string.IsNullOrEmpty(prescription.Id))
+            var prescription = new Prescription
             {
-                prescription.Id = Guid.NewGuid().ToString();
-            }
+                PatientId = dto.PatientId,
+                Date = dto.Date,
+                Notes = dto.Notes,
+                PhysicianId = dto.PhysicianId,
+                CreatedAt = DateTime.UtcNow,
+                Medications = new List<Medication>()
+            };
 
-            if (prescription.CreatedAt == default)
+            if (dto.Medications != null)
             {
-                prescription.CreatedAt = DateTime.UtcNow;
-            }
-
-            if (prescription.Medications != null)
-            {
-                foreach (var medication in prescription.Medications)
+                foreach (var m in dto.Medications)
                 {
-                    if (string.IsNullOrEmpty(medication.Id))
+                    prescription.Medications.Add(new Medication
                     {
-                        medication.Id = Guid.NewGuid().ToString();
-                    }
-
-                    medication.PrescriptionId = prescription.Id;
-
-                    if (medication.CreatedAt == default)
-                    {
-                        medication.CreatedAt = DateTime.UtcNow;
-                    }
-
-                    if (medication.StartDate == default)
-                    {
-                        medication.StartDate = DateTime.UtcNow;
-                    }
+                        Name = m.Name,
+                        Dosage = m.Dosage,
+                        Frequency = m.Frequency,
+                        Duration = m.Duration,
+                        Notes = m.Notes,
+                        StartDate = m.StartDate,
+                        EndDate = m.EndDate,
+                        CreatedAt = DateTime.UtcNow,
+                        IsActive = true
+                    });
                 }
             }
-            else
-            {
-                prescription.Medications = new List<Medication>();
-            }
 
-            _prescriptions.Add(prescription);
+            _context.Prescriptions.Add(prescription);
+            _context.SaveChanges();
             _logger.LogInformation($"Prescription created with ID: {prescription.Id}");
 
-            return CreatedAtAction(nameof(GetPrescriptionById), new { id = prescription.Id }, prescription);
+            // Fetch with medications for output
+            var created = _context.Prescriptions
+                .Include(p => p.Medications)
+                .FirstOrDefault(p => p.Id == prescription.Id);
+
+            var output = new PrescriptionOutputDto
+            {
+                Id = created.Id,
+                PatientId = created.PatientId,
+                Date = created.Date,
+                Notes = created.Notes,
+                PhysicianId = created.PhysicianId,
+                IsActive = created.IsActive,
+                CreatedAt = created.CreatedAt,
+                UpdatedAt = created.UpdatedAt,
+                Medications = created.Medications.Select(m => new MedicationOutputDto
+                {
+                    Id = m.Id,
+                    PrescriptionId = m.PrescriptionId,
+                    Name = m.Name,
+                    Dosage = m.Dosage,
+                    Frequency = m.Frequency,
+                    Duration = m.Duration,
+                    Notes = m.Notes,
+                    StartDate = m.StartDate,
+                    EndDate = m.EndDate,
+                    IsActive = m.IsActive,
+                    CreatedAt = m.CreatedAt,
+                    UpdatedAt = m.UpdatedAt
+                }).ToList()
+            };
+
+            return CreatedAtAction(nameof(GetPrescriptionById), new { id = created.Id }, output);
         }
 
         // PUT: api/Prescription/{id}
         [HttpPut("{id}")]
-        public IActionResult UpdatePrescription(string id, Prescription prescription)
+        public IActionResult UpdatePrescription(int id, PrescriptionDto dto)
         {
             _logger.LogInformation($"Updating prescription with ID: {id}");
-            if (prescription == null || id != prescription.Id)
+            if (dto == null)
             {
-                return BadRequest("Invalid prescription data or ID mismatch");
+                return BadRequest("Invalid prescription data");
             }
 
-            var existingPrescription = _prescriptions.FirstOrDefault(p => p.Id == id);
+            var existingPrescription = _context.Prescriptions
+                .Include(p => p.Medications)
+                .FirstOrDefault(p => p.Id == id);
 
             if (existingPrescription == null)
             {
                 return NotFound("Prescription not found");
             }
 
-            prescription.UpdatedAt = DateTime.UtcNow;
+            existingPrescription.PatientId = dto.PatientId;
+            existingPrescription.Date = dto.Date;
+            existingPrescription.Notes = dto.Notes;
+            existingPrescription.PhysicianId = dto.PhysicianId;
+            existingPrescription.UpdatedAt = DateTime.UtcNow;
 
-            prescription.CreatedAt = existingPrescription.CreatedAt;
+            _context.Medications.RemoveRange(existingPrescription.Medications);
 
-            var index = _prescriptions.IndexOf(existingPrescription);
-            _prescriptions[index] = prescription;
+            existingPrescription.Medications = dto.Medications?.Select(m => new Medication
+            {
+                Name = m.Name,
+                Dosage = m.Dosage,
+                Frequency = m.Frequency,
+                Duration = m.Duration,
+                Notes = m.Notes,
+                StartDate = m.StartDate,
+                EndDate = m.EndDate,
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true
+            }).ToList() ?? new List<Medication>();
 
+            _context.SaveChanges();
             return NoContent();
         }
 
@@ -277,54 +280,57 @@ namespace cloud_development_assignment_backend.Controllers
         public IActionResult DeletePrescription(string id)
         {
             _logger.LogInformation($"Deleting prescription with ID: {id}");
-            var prescription = _prescriptions.FirstOrDefault(p => p.Id == id);
+            var prescription = _context.Prescriptions
+                .Include(p => p.Medications)
+                .FirstOrDefault(p => p.Id.ToString() == id);
 
             if (prescription == null)
             {
                 return NotFound("Prescription not found");
             }
 
-            _prescriptions.Remove(prescription);
+            _context.Medications.RemoveRange(prescription.Medications);
+            _context.Prescriptions.Remove(prescription);
+            _context.SaveChanges();
 
             return NoContent();
         }
 
         // POST: api/Prescription/{prescriptionId}/medications
         [HttpPost("{prescriptionId}/medications")]
-        public ActionResult<Medication> AddMedicationToPrescription(string prescriptionId, Medication medication)
+        public ActionResult<Medication> AddMedicationToPrescription(int prescriptionId, MedicationDto medicationDto)
         {
             _logger.LogInformation($"Adding medication to prescription ID: {prescriptionId}");
-            if (medication == null)
+            if (medicationDto == null)
             {
                 return BadRequest("Medication data is required");
             }
 
-            var prescription = _prescriptions.FirstOrDefault(p => p.Id == prescriptionId);
+            var prescription = _context.Prescriptions
+                .Include(p => p.Medications)
+                .FirstOrDefault(p => p.Id == prescriptionId);
 
             if (prescription == null)
             {
                 return NotFound("Prescription not found");
             }
 
-            if (string.IsNullOrEmpty(medication.Id))
+            var medication = new Medication
             {
-                medication.Id = Guid.NewGuid().ToString();
-            }
-
-            medication.PrescriptionId = prescriptionId;
-
-
-            if (medication.CreatedAt == default)
-            {
-                medication.CreatedAt = DateTime.UtcNow;
-            }
-
-            if (medication.StartDate == default)
-            {
-                medication.StartDate = DateTime.UtcNow;
-            }
+                Name = medicationDto.Name,
+                Dosage = medicationDto.Dosage,
+                Frequency = medicationDto.Frequency,
+                Duration = medicationDto.Duration,
+                Notes = medicationDto.Notes,
+                StartDate = medicationDto.StartDate,
+                EndDate = medicationDto.EndDate,
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true,
+                PrescriptionId = prescriptionId
+            };
 
             prescription.Medications.Add(medication);
+            _context.SaveChanges();
             _logger.LogInformation($"Medication added with ID: {medication.Id}");
 
             return CreatedAtAction(nameof(GetPrescriptionById), new { id = prescriptionId }, medication);
@@ -332,10 +338,12 @@ namespace cloud_development_assignment_backend.Controllers
 
         // DELETE: api/Prescription/{prescriptionId}/medications/{medicationId}
         [HttpDelete("{prescriptionId}/medications/{medicationId}")]
-        public IActionResult RemoveMedicationFromPrescription(string prescriptionId, string medicationId)
+        public IActionResult RemoveMedicationFromPrescription(int prescriptionId, int medicationId)
         {
             _logger.LogInformation($"Removing medication ID: {medicationId} from prescription ID: {prescriptionId}");
-            var prescription = _prescriptions.FirstOrDefault(p => p.Id == prescriptionId);
+            var prescription = _context.Prescriptions
+                .Include(p => p.Medications)
+                .FirstOrDefault(p => p.Id == prescriptionId);
 
             if (prescription == null)
             {
@@ -349,24 +357,43 @@ namespace cloud_development_assignment_backend.Controllers
                 return NotFound("Medication not found");
             }
 
-            prescription.Medications.Remove(medication);
+            _context.Medications.Remove(medication);
+            _context.SaveChanges();
 
             return NoContent();
         }
 
         // GET: api/Prescription/{prescriptionId}/medications
         [HttpGet("{prescriptionId}/medications")]
-        public ActionResult<IEnumerable<Medication>> GetMedicationsForPrescription(string prescriptionId)
+        public ActionResult<IEnumerable<MedicationOutputDto>> GetMedicationsForPrescription(int prescriptionId)
         {
             _logger.LogInformation($"Getting medications for prescription ID: {prescriptionId}");
-            var prescription = _prescriptions.FirstOrDefault(p => p.Id == prescriptionId);
+            var prescription = _context.Prescriptions
+                .Include(p => p.Medications)
+                .FirstOrDefault(p => p.Id == prescriptionId);
 
             if (prescription == null)
             {
                 return NotFound("Prescription not found");
             }
 
-            return Ok(prescription.Medications);
+            var result = prescription.Medications.Select(m => new MedicationOutputDto
+            {
+                Id = m.Id,
+                PrescriptionId = m.PrescriptionId,
+                Name = m.Name,
+                Dosage = m.Dosage,
+                Frequency = m.Frequency,
+                Duration = m.Duration,
+                Notes = m.Notes,
+                StartDate = m.StartDate,
+                EndDate = m.EndDate,
+                IsActive = m.IsActive,
+                CreatedAt = m.CreatedAt,
+                UpdatedAt = m.UpdatedAt
+            }).ToList();
+
+            return Ok(result);
         }
     }
 }

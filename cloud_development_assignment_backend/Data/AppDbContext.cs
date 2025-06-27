@@ -18,6 +18,10 @@ namespace cloud_development_assignment_backend.Data
 
         public DbSet<Patient> PatientMedicalInfo { get; set; }
 
+        public DbSet<Prescription> Prescriptions { get; set; }
+
+        public DbSet<Medication> Medications { get; set; }
+
         public DbSet<MealEntry> MealEntries { get; set; }
 
     }

@@ -1,23 +1,22 @@
-﻿// In Prescription.cs
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace cloud_development_assignment_backend.Models
 {
     public class Prescription
     {
-        [Required]
-        public string Id { get; set; }
+        [Key]
+        public int Id { get; set; }
 
         [Required]
-        public string PatientId { get; set; }
+        public int PatientId { get; set; }
 
+        [Required]
         public DateTime Date { get; set; }
 
-        public string Notes { get; set; }
+        public string? Notes { get; set; }
 
-        public string PhysicianId { get; set; }
-
-        public string PhysicianName { get; set; }
+        public int PhysicianId { get; set; }
 
         public bool IsActive { get; set; } = true;
 
@@ -25,7 +24,13 @@ namespace cloud_development_assignment_backend.Models
 
         public DateTime? UpdatedAt { get; set; }
 
-        // Navigation property 
+
         public List<Medication> Medications { get; set; } = new List<Medication>();
+
+        [ForeignKey("PatientId")]
+        public User? Patient { get; set; }
+
+        [ForeignKey("PhysicianId")]
+        public User? Physician { get; set; }
     }
 }
