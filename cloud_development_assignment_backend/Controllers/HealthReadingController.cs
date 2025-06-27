@@ -102,5 +102,71 @@ namespace cloud_development_assignment_backend.Controllers
                 });
             }
         }
+
+        [HttpGet("user/{userId}/summary")]
+        public IActionResult GetUserReadingsSummary(int userId)
+        {
+            try
+            {
+                var readings = _context.HealthReadings
+                    .Where(r => r.UserId == userId)
+                    .ToList();
+
+                if (!readings.Any())
+                {
+                    return Ok(new { message = "No readings found for user.", summary = (object?)null });
+                }
+
+                var summary = new
+                {
+                    BloodSugar = new
+                    {
+                        Average = readings.Average(r => r.BloodSugar),
+                        Min = readings.Min(r => r.BloodSugar),
+                        Max = readings.Max(r => r.BloodSugar)
+                    },
+                    InsulinDosage = new
+                    {
+                        Average = readings.Average(r => r.InsulinDosage),
+                        Min = readings.Min(r => r.InsulinDosage),
+                        Max = readings.Max(r => r.InsulinDosage)
+                    },
+                    BodyWeight = new
+                    {
+                        Average = readings.Where(r => r.BodyWeight.HasValue).Any() ? readings.Where(r => r.BodyWeight.HasValue).Average(r => r.BodyWeight.Value) : (double?)null,
+                        Min = readings.Where(r => r.BodyWeight.HasValue).Any() ? readings.Where(r => r.BodyWeight.HasValue).Min(r => r.BodyWeight.Value) : (double?)null,
+                        Max = readings.Where(r => r.BodyWeight.HasValue).Any() ? readings.Where(r => r.BodyWeight.HasValue).Max(r => r.BodyWeight.Value) : (double?)null
+                    },
+                    SystolicBP = new
+                    {
+                        Average = readings.Where(r => r.SystolicBP.HasValue).Any() ? readings.Where(r => r.SystolicBP.HasValue).Average(r => r.SystolicBP.Value) : (double?)null,
+                        Min = readings.Where(r => r.SystolicBP.HasValue).Any() ? readings.Where(r => r.SystolicBP.HasValue).Min(r => r.SystolicBP.Value) : (int?)null,
+                        Max = readings.Where(r => r.SystolicBP.HasValue).Any() ? readings.Where(r => r.SystolicBP.HasValue).Max(r => r.SystolicBP.Value) : (int?)null
+                    },
+                    DiastolicBP = new
+                    {
+                        Average = readings.Where(r => r.DiastolicBP.HasValue).Any() ? readings.Where(r => r.DiastolicBP.HasValue).Average(r => r.DiastolicBP.Value) : (double?)null,
+                        Min = readings.Where(r => r.DiastolicBP.HasValue).Any() ? readings.Where(r => r.DiastolicBP.HasValue).Min(r => r.DiastolicBP.Value) : (int?)null,
+                        Max = readings.Where(r => r.DiastolicBP.HasValue).Any() ? readings.Where(r => r.DiastolicBP.HasValue).Max(r => r.DiastolicBP.Value) : (int?)null
+                    },
+                    HeartRate = new
+                    {
+                        Average = readings.Where(r => r.HeartRate.HasValue).Any() ? readings.Where(r => r.HeartRate.HasValue).Average(r => r.HeartRate.Value) : (double?)null,
+                        Min = readings.Where(r => r.HeartRate.HasValue).Any() ? readings.Where(r => r.HeartRate.HasValue).Min(r => r.HeartRate.Value) : (int?)null,
+                        Max = readings.Where(r => r.HeartRate.HasValue).Any() ? readings.Where(r => r.HeartRate.HasValue).Max(r => r.HeartRate.Value) : (int?)null
+                    }
+                };
+
+                return Ok(new { summary });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    error = "Failed to fetch summary.",
+                    details = ex.Message
+                });
+            }
+        }
     }
 }
