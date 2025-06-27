@@ -27,7 +27,7 @@ namespace cloud_development_assignment_backend.Models
         public DateTime ReminderDate { get; set; }
 
         [Required]
-        public DateTime ReminderDue { get; set; }
+        public TimeSpan ReminderDue { get; set; }
 
         public string? Notes { get; set; }
 
