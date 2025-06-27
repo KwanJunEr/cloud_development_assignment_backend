@@ -38,5 +38,4 @@ namespace cloud_development_assignment_backend.Models
         public Prescription? Prescription { get; set; }
     }
 
-    // DTOs are defined in Prescription.cs
 }
