@@ -252,6 +252,140 @@ namespace cloud_development_assignment_backend.Controllers
             }
         }
 
+        [HttpPut("completestatus/{appointmentId}")]
+        public async Task<IActionResult> CompleteAppointmentStatus(int appointmentId)
+        {
+            try
+            {
+                // 1️⃣ Find the appointment
+                var appointment = await _context.PatientAppointmentBooking
+                    .FirstOrDefaultAsync(a => a.Id == appointmentId);
+
+                if (appointment == null)
+                {
+                    return NotFound(new { message = "Appointment not found." });
+                }
+
+                // 2️⃣ Update appointment status to "completed"
+                appointment.Status = "completed";
+
+                // 3️⃣ Parse the time slot to get start and end time
+                var timeParts = appointment.ProviderAvailableTimeSlot.Split('-');
+                if (timeParts.Length != 2)
+                {
+                    return BadRequest(new { error = "Invalid time slot format in appointment." });
+                }
+
+                if (!TimeSpan.TryParse(timeParts[0].Trim(), out var startTime))
+                {
+                    return BadRequest(new { error = "Invalid start time format." });
+                }
+
+                if (!TimeSpan.TryParse(timeParts[1].Trim(), out var endTime))
+                {
+                    return BadRequest(new { error = "Invalid end time format." });
+                }
+
+                // 4️⃣ Find the related provider availability record
+                var providerAvailability = await _context.ProviderAvailabilities
+                    .FirstOrDefaultAsync(p =>
+                        p.ProviderId == appointment.ProviderID &&
+                        p.AvailabilityDate == appointment.ProviderAvailableDate &&
+                        p.StartTime == startTime &&
+                        p.EndTime == endTime);
+
+                if (providerAvailability != null)
+                {
+                    // 5️⃣ Update the status to "completed"
+                    providerAvailability.Status = "completed";
+                }
+
+                // 6️⃣ Save all changes
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    message = "Appointment and provider availability status updated to completed.",
+                    appointment
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "An error occurred while completing the appointment status.",
+                    error = ex.Message
+                });
+            }
+        }
+
+        [HttpPut("cancelstatus/{appointmentId}")]
+        public async Task<IActionResult> CancelAppointmentStatus(int appointmentId)
+        {
+            try
+            {
+                // 1️⃣ Find the appointment
+                var appointment = await _context.PatientAppointmentBooking
+                    .FirstOrDefaultAsync(a => a.Id == appointmentId);
+
+                if (appointment == null)
+                {
+                    return NotFound(new { message = "Appointment not found." });
+                }
+
+                // 2️⃣ Update appointment status to "cancelled"
+                appointment.Status = "cancelled";
+
+                // 3️⃣ Parse the time slot to get start and end time
+                var timeParts = appointment.ProviderAvailableTimeSlot.Split('-');
+                if (timeParts.Length != 2)
+                {
+                    return BadRequest(new { error = "Invalid time slot format in appointment." });
+                }
+
+                if (!TimeSpan.TryParse(timeParts[0].Trim(), out var startTime))
+                {
+                    return BadRequest(new { error = "Invalid start time format." });
+                }
+
+                if (!TimeSpan.TryParse(timeParts[1].Trim(), out var endTime))
+                {
+                    return BadRequest(new { error = "Invalid end time format." });
+                }
+
+                // 4️⃣ Find the related provider availability record
+                var providerAvailability = await _context.ProviderAvailabilities
+                    .FirstOrDefaultAsync(p =>
+                        p.ProviderId == appointment.ProviderID &&
+                        p.AvailabilityDate == appointment.ProviderAvailableDate &&
+                        p.StartTime == startTime &&
+                        p.EndTime == endTime);
+
+                if (providerAvailability != null)
+                {
+                    // 5️⃣ Update the status to "available"
+                    providerAvailability.Status = "available";
+                }
+
+                // 6️⃣ Save all changes
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    message = "Appointment status updated to cancelled and provider availability set to available.",
+                    appointment
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "An error occurred while cancelling the appointment.",
+                    error = ex.Message
+                });
+            }
+        }
+
 
     }
 }
