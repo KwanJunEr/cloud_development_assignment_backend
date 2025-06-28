@@ -118,5 +118,78 @@ namespace cloud_development_assignment_backend.Controllers
 
             }
         }
+
+        [HttpPost("create")] 
+        public async Task<IActionResult> CreateAppointment([FromBody] PatientAppointmentBookingDto dto)
+        {
+            try
+            {
+                //split and parse the time range 
+                var timeParts = dto.ProviderAvailableTimeSlot.Split('-');
+                if (timeParts.Length != 2)
+                {
+                    return BadRequest(new { error = "Invalid time slot format. Expected format: 'HH:mm - HH:mm'." });
+                }
+
+                if (!TimeSpan.TryParse(timeParts[0].Trim(), out var startTime))
+                {
+                    return BadRequest(new { error = "Invalid start time format." });
+                }
+
+                if (!TimeSpan.TryParse(timeParts[1].Trim(), out var endTime))
+                {
+                    return BadRequest(new { error = "Invalid end time format." });
+                }
+
+                // Check provider availability for this date and time slot
+                var providerAvailability = await _context.ProviderAvailabilities
+                    .FirstOrDefaultAsync(p =>
+                        p.ProviderId == dto.ProviderID &&
+                        p.AvailabilityDate == dto.ProviderAvailableDate &&
+                        p.StartTime == startTime &&
+                        p.EndTime == endTime);
+
+                if (providerAvailability == null)
+                {
+                    return BadRequest(new { error = "Provider availability not found for the selected date and time slot." });
+                }
+
+                if (providerAvailability.Status.Equals("taken", StringComparison.OrdinalIgnoreCase))
+                {
+                    return BadRequest(new { error = "The selected time slot is already taken." });
+                }
+
+                // All good, proceed with creating appointment
+                var appointment = new PatientAppointmentBooking
+                {
+                    PatientID = dto.PatientID,
+                    ProviderID = dto.ProviderID,
+                    Role = dto.Role,
+                    ProviderName = dto.ProviderName,
+                    ProviderSpecialization = dto.ProviderSpecialization,
+                    ProviderVenue = dto.ProviderVenue,
+                    ProviderAvailableDate = dto.ProviderAvailableDate,
+                    ProviderAvailableTimeSlot = dto.ProviderAvailableTimeSlot,
+                    BookingMode = dto.BookingMode,
+                    ServiceBooked = dto.ServiceBooked,
+                    ReasonsForVisit = dto.ReasonsForVisit,
+                    Status = dto.Status
+                };
+
+                _context.PatientAppointmentBooking.Add(appointment);
+
+                // Update availability status to "taken"
+                providerAvailability.Status = "taken";
+
+                await _context.SaveChangesAsync();
+
+                return Ok(appointment);
+
+            }
+            catch(Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
     }
 }
