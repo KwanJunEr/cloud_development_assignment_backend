@@ -6,6 +6,7 @@ namespace cloud_development_assignment_backend.DTO
     {
         public int Id { get; set; }
         public int PatientId { get; set; }
+        public int PhysicianId { get; set; } 
         public string PatientName { get; set; }
         public DateTime FlaggedDate { get; set; }
         public string FlagReason { get; set; }
