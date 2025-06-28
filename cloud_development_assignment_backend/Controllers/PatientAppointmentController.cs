@@ -81,5 +81,42 @@ namespace cloud_development_assignment_backend.Controllers
 
             }
         }
+
+        [HttpGet("dietician-availability/{providerId}")]
+        public async Task<IActionResult> GetDieticianAvailability(int providerId)
+        {
+            try
+            {
+                var availability = await _context.ProviderAvailabilities
+                     .Where(a =>
+                        a.ProviderId == providerId &&
+                        a.AvailabilityDate >= DateTime.Today &&
+                        a.Status == "Available"
+                        )
+                        .OrderBy(a => a.AvailabilityDate)
+                        .Select(a => new
+                        {
+                            date = a.AvailabilityDate.ToString("yyyy-MM-dd"),
+                            timeRange = $"{a.StartTime:hh\\:mm} - {a.EndTime:hh\\:mm}",
+                            notes = a.Notes
+                        })
+                        .ToListAsync();
+                return Ok(new
+                {
+                    message = "Successfully retrieved available provider slots",
+                    availability
+                });
+
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "An error occurred while retrieving provider availability",
+                    error = ex.Message
+                });
+
+            }
+        }
     }
 }
