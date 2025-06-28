@@ -1,11 +1,32 @@
-﻿namespace cloud_development_assignment_backend.Models
+﻿using System;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace cloud_development_assignment_backend.Models
 {
+    [Table("DietTip")] // Explicitly maps to your table name
     public class DietTip
     {
-        public string Id { get; set; }
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        public int DieticianId { get; set; }
+
+        [Required]
+        [MaxLength(255)]
         public string Title { get; set; }
+
+        [Required]
         public string Content { get; set; }
-        public string CreatedBy { get; set; }
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        [Required]
+        public DateTime CreatedAt { get; set; }
+
+        [Required]
+        public DateTime UpdatedAt { get; set; }
+
+        [ForeignKey("DieticianId")]
+        public User Dietician { get; set; }
     }
 }

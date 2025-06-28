@@ -28,5 +28,7 @@ namespace cloud_development_assignment_backend.Data
 
         public DbSet<PatientAppointmentBooking> PatientAppointmentBooking { get; set; }
 
+        public DbSet<DietTip> DietTip { get; set; }
+
     }
 }
