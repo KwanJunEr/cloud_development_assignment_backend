@@ -26,5 +26,9 @@ namespace cloud_development_assignment_backend.Data
 
         public DbSet<PhysicianNotification> PhysicianNotifications { get; set; }
 
+        public DbSet<MedicationReminder> MedicationReminders { get; set; }
+
+        public DbSet<PatientAppointmentBooking> PatientAppointmentBooking { get; set; }
+
     }
 }
