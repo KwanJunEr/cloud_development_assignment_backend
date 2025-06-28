@@ -220,5 +220,20 @@ namespace cloud_development_assignment_backend.Controllers
                 .ToList();
             return Ok(patients);
         }
+
+        // PATCH: api/Patient/{id}/last-appointment
+        [HttpPatch("{id}/last-appointment")]
+        public IActionResult UpdateLastAppointment(int id, [FromBody] DateTime lastAppointment)
+        {
+            var patient = _context.PatientMedicalInfo.FirstOrDefault(p => p.PatientId == id);
+            if (patient == null)
+                return NotFound();
+
+            patient.LastAppointment = lastAppointment;
+            _context.SaveChanges();
+            _logger.LogInformation($"Updated LastAppointment for patient with ID: {id}");
+
+            return NoContent();
+        }
     }
 }

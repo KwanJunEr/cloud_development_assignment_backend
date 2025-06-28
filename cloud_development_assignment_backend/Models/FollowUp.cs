@@ -14,6 +14,9 @@ namespace cloud_development_assignment_backend.Models
         public int PatientId { get; set; }
 
         [Required]
+        public int PhysicianId { get; set; } 
+
+        [Required]
         public DateTime FlaggedDate { get; set; }
 
         [Required]
@@ -32,5 +35,7 @@ namespace cloud_development_assignment_backend.Models
         public string? FollowUpNotes { get; set; }
 
         public User User { get; set; }
+
+        public User? Physician { get; set; }
     }
 }

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using cloud_development_assignment_backend.DTO;
 using cloud_development_assignment_backend.Models;
+using cloud_development_assignment_backend.Services;
 
 namespace cloud_development_assignment_backend.Controllers
 {
@@ -11,10 +12,12 @@ namespace cloud_development_assignment_backend.Controllers
     public class PatientAppointmentController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly PhysicianNotificationService _notificationService;
 
         public PatientAppointmentController(AppDbContext context)
         {
             _context = context;
+            _notificationService = new PhysicianNotificationService(_context);
         }
 
         [HttpGet("dietician")]
@@ -182,6 +185,15 @@ namespace cloud_development_assignment_backend.Controllers
                 providerAvailability.Status = "taken";
 
                 await _context.SaveChangesAsync();
+
+                // Notify physician about new appointment
+                _notificationService.CreateNotification(
+                    dto.ProviderID,
+                    $"A new appointment has been booked by patient (ID: {dto.PatientID}) for {dto.ProviderAvailableDate:yyyy-MM-dd} at {dto.ProviderAvailableTimeSlot}.",
+                    "appointment",
+                    sender: dto.PatientID.ToString(),
+                    subject: "New Appointment Booking"
+                );
 
                 return Ok(appointment);
 

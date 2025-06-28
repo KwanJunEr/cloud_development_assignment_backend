@@ -5,6 +5,7 @@ namespace cloud_development_assignment_backend.DTO
     public class FollowUpDto
     {
         public int PatientId { get; set; } 
+        public int PhysicianId { get; set; } 
         public DateTime FlaggedDate { get; set; }
         public string FlagReason { get; set; }
         public string FlaggedBy { get; set; }
