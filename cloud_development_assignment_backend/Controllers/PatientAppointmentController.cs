@@ -191,5 +191,67 @@ namespace cloud_development_assignment_backend.Controllers
                 return BadRequest(new { error = ex.Message });
             }
         }
+
+        [HttpGet("getappointment/{patientId}")]
+        public async Task<IActionResult> GetAppointments(int patientId)
+        {
+            try
+            {
+                var appointments = await _context.PatientAppointmentBooking
+                     .Where(a =>
+                        a.Status.ToLower() == "confirmed" &&
+                        a.PatientID == patientId
+            )
+            .OrderByDescending(a => a.ProviderAvailableDate)
+            .ToListAsync();
+
+                return Ok(new
+                {
+                    message = "Successfully retrieved confirmed appointments.",
+                    appointments
+                });
+
+            }
+            catch(Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "An error occurred while retrieving appointments.",
+                    error = ex.Message
+                });
+            }
+        }
+
+
+        [HttpGet("getallappointment/{patientId}")]
+        public async Task<IActionResult> GetAllAppointments(int patientId)
+        {
+            try
+            {
+                var appointments = await _context.PatientAppointmentBooking
+                     .Where(a =>
+                        a.PatientID == patientId
+            )
+            .OrderByDescending(a => a.ProviderAvailableDate)
+            .ToListAsync();
+
+                return Ok(new
+                {
+                    message = "Successfully retrieved confirmed appointments.",
+                    appointments
+                });
+
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "An error occurred while retrieving appointments.",
+                    error = ex.Message
+                });
+            }
+        }
+
+
     }
 }
