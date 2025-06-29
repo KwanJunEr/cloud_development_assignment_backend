@@ -1,12 +1,41 @@
-﻿namespace cloud_development_assignment_backend.Models
+﻿using System;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace cloud_development_assignment_backend.Models
 {
     public class DietPlan
     {
-        public string Id { get; set; }
-        public string PatientId { get; set; }
-        public string Title { get; set; }
-        public string Description { get; set; }
-        public List<string> Recommendations { get; set; } = new();
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        public int DieticianId { get; set; }
+
+        [Required]
+        public int PatientId { get; set; }
+
+        [Required]
+        [MaxLength(100)]
+        public string MealType { get; set; }
+
+        [Required]
+        public string MealPlan { get; set; }
+
+        [Required]
+        public DateTime CreatedDate { get; set; }
+
+        [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        [Required]
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+        // Navigation properties
+        [ForeignKey("DieticianId")]
+        public User Dietician { get; set; }
+
+        [ForeignKey("PatientId")]
+        public User Patient { get; set; }
     }
 }
