@@ -1,9 +1,10 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using cloud_development_assignment_backend.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using cloud_development_assignment_backend.Business;
+using cloud_development_assignment_backend.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,8 +12,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
-// ? Register your custom business logic service
+// ✅ Register your custom business logic service
 builder.Services.AddScoped<HealhtLogBusinessLogic>();
+builder.Services.AddScoped<MedicalSupplyStatusService>();
 
 
 // Register DbContext for SQL Server
