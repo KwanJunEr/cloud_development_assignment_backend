@@ -198,6 +198,43 @@ namespace cloud_development_assignment_backend.Controllers
             }
         }
 
+        [HttpGet("dietician-patient/{dieticianId}")]
+        public async Task<IActionResult> GetAppointmentsByDieticianId(int dieticianId)
+        {
+            try
+            {
+                        var appointments = await (
+                   from appt in _context.PatientAppointmentBooking
+                   join patient in _context.Users on appt.PatientID equals patient.Id
+                   where appt.ProviderID == dieticianId
+                         && appt.Status != "Cancelled"
+                   select new PatientAppointmentResponseDto
+                   {
+                        Id = appt.Id,
+                        PatientID = appt.PatientID,
+                        ProviderID = appt.ProviderID,
+                        Role = appt.Role,
+                        ProviderName = appt.ProviderName,
+                        ProviderSpecialization = appt.ProviderSpecialization,
+                        ProviderVenue = appt.ProviderVenue,
+                        ProviderAvailableDate = appt.ProviderAvailableDate,
+                        ProviderAvailableTimeSlot = appt.ProviderAvailableTimeSlot,
+                        BookingMode = appt.BookingMode,
+                        ServiceBooked = appt.ServiceBooked,
+                        ReasonsForVisit = appt.ReasonsForVisit,
+                        Status = appt.Status,
+                        PatientFullName = patient.FirstName + " " + patient.LastName
+                    })
+                    .ToListAsync();
+
+                return Ok(appointments);
+            }
+            catch (System.Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+
 
     }
 }
