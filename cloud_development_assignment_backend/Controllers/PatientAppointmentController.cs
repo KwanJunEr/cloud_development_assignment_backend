@@ -397,5 +397,35 @@ namespace cloud_development_assignment_backend.Controllers
                 });
             }
         }
+
+
+        [HttpGet("getallDieticianAppointment/{dieticianId}")]
+        public async Task<IActionResult> GetAllDieticianAppointments(int dieticianId)
+        {
+            try
+            {
+                var appointments = await _context.PatientAppointmentBooking
+                     .Where(a =>
+                        a.ProviderID == dieticianId
+            )
+            .OrderByDescending(a => a.ProviderAvailableDate)
+            .ToListAsync();
+
+                return Ok(new
+                {
+                    message = "Successfully retrieved confirmed appointments.",
+                    appointments
+                });
+
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "An error occurred while retrieving appointments.",
+                    error = ex.Message
+                });
+            }
+        }
     }
 }
