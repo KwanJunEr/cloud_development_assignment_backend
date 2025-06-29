@@ -30,10 +30,18 @@ namespace cloud_development_assignment_backend.Controllers
         {
             try
             {
+                var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Id == dto.FamilyId);
+
+                if (user == null)
+                {
+                    return BadRequest(new { message = "No user found for the specified FamilyId (UserId)." });
+                }
+
                 var supply = new MedicalSupply
                 {
                     FamilyId = dto.FamilyId,
-                    PatientId = dto.PatientId,
+                    PatientId = user?.PatientId,
                     MedicineName = dto.MedicineName,
                     MedicineDescription = dto.MedicineDescription,
                     Quantity = dto.Quantity,

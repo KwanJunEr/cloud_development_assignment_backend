@@ -15,7 +15,7 @@ namespace cloud_development_assignment_backend.Models
         public User Family { get; set; }
 
         [Required]
-        public int PatientId { get; set; }
+        public int? PatientId { get; set; }
 
         [ForeignKey(nameof(PatientId))]
         public User Patient { get; set; }
