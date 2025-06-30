@@ -104,6 +104,8 @@ namespace cloud_development_assignment_backend.Controllers
                 dietTip.Content = dto.Content;
                 dietTip.UpdatedAt = DateTime.UtcNow;
 
+                await _context.SaveChangesAsync();
+
                 return Ok(new
                 {
                     message = "DietTip updated successfully",
