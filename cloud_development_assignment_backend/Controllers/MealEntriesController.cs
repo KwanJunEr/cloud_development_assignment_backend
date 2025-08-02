@@ -141,5 +141,25 @@ namespace cloud_development_assignment_backend.Controllers
                 return StatusCode(500, $"An error occurred: {ex.Message}");
             }
         }
+
+        [HttpGet("patient/{patientId}")]
+        public async Task<IActionResult> GetMealEntriesByPatientId(int patientId)
+        {
+            try
+            {
+                var fiveDaysAgo = DateTime.Today.AddDays(-5);
+
+                var mealEntries = await _context.MealEntries
+                    .Where(m => m.UserId == patientId && m.EntryDate >= fiveDaysAgo)
+                    .OrderByDescending(m => m.EntryDate)
+                    .ToListAsync();
+
+                return Ok(mealEntries);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
     }
 }

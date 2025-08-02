@@ -32,5 +32,9 @@ namespace cloud_development_assignment_backend.Data
 
         public DbSet<DietTip> DietTip { get; set; }
 
+        public DbSet<DietPlan> DietPlan { get; set; }
+        
+        public DbSet<MedicalSupply> MedicalSupply { get; set; }
+ 
     }
 }

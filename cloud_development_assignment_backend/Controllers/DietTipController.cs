@@ -104,6 +104,8 @@ namespace cloud_development_assignment_backend.Controllers
                 dietTip.Content = dto.Content;
                 dietTip.UpdatedAt = DateTime.UtcNow;
 
+                await _context.SaveChangesAsync();
+
                 return Ok(new
                 {
                     message = "DietTip updated successfully",
@@ -139,6 +141,40 @@ namespace cloud_development_assignment_backend.Controllers
                 return StatusCode(500, new { error = $"An error occurred: {ex.Message}" });
             }
         }
+
+        [HttpGet("getAllDiettip")]
+        public async Task<ActionResult<IEnumerable<DietTipResponseDto>>> GetAllDietTipsForPatient()
+        {
+            try
+            {
+                var tips = await (
+                    from dt in _context.DietTip
+                    join u in _context.Users on dt.DieticianId equals u.Id
+                    select new DietTipResponseDto
+                    {
+                        Id = dt.Id,
+                        Title = dt.Title,
+                        Content = dt.Content,
+                        CreatedAt = dt.CreatedAt,
+                        UpdatedAt = dt.UpdatedAt,
+                        DieticianFullName = u.FirstName + " " + u.LastName,
+                        DieticianSpecialization = u.Specialization,
+                        DieticianHospital = u.Hospital
+                    }
+                ).ToListAsync();
+
+                return Ok(new
+                {
+                    message = "Return all diet tips with dietician details",
+                    tips
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"An error occurred: {ex.Message}");
+            }
+        }
+
 
 
     }

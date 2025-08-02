@@ -1,9 +1,10 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using cloud_development_assignment_backend.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using cloud_development_assignment_backend.Business;
+using cloud_development_assignment_backend.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,8 +12,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
-// ? Register your custom business logic service
+// ✅ Register your custom business logic service
 builder.Services.AddScoped<HealhtLogBusinessLogic>();
+builder.Services.AddScoped<MedicalSupplyStatusService>();
 
 
 // Register DbContext for SQL Server
@@ -51,12 +53,15 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowNextJsFrontend",
         policy =>
         {
-            policy.WithOrigins("http://localhost:3000",
-                    "https://localhost:3000") // Change this to your Next.js app URL
-                  .AllowAnyHeader()
-                  .AllowAnyMethod();
+            policy
+                .AllowAnyOrigin()
+                .AllowAnyHeader()
+                .AllowAnyMethod();
         });
 });
+
+var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
+builder.WebHost.UseUrls($"http://*:{port}");
 
 
 var app = builder.Build();

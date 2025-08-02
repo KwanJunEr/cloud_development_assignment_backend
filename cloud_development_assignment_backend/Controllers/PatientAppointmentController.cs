@@ -397,5 +397,79 @@ namespace cloud_development_assignment_backend.Controllers
                 });
             }
         }
+
+
+        [HttpGet("getallDieticianAppointment/{dieticianId}")]
+        public async Task<IActionResult> GetAllDieticianAppointments(int dieticianId)
+        {
+            try
+            {
+                var appointments = await _context.PatientAppointmentBooking
+                     .Where(a =>
+                        a.ProviderID == dieticianId
+            )
+            .OrderByDescending(a => a.ProviderAvailableDate)
+            .ToListAsync();
+
+                return Ok(new
+                {
+                    message = "Successfully retrieved confirmed appointments.",
+                    appointments
+                });
+
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "An error occurred while retrieving appointments.",
+                    error = ex.Message
+                });
+            }
+        }
+
+        [HttpGet("getAllAppointmentForFamily/{familyId}")]
+        public async Task<IActionResult> GetAllAppointmentForFamily(int familyId)
+        {
+            try
+            {
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == familyId);
+                if (user == null)
+                {
+                    return NotFound(new
+                    {
+                        message = "No user found for the specified FamilyId."
+                    });
+                }
+                if (user.PatientId == null)
+                {
+                    return BadRequest(new
+                    {
+                        message = "This user does not have an associated PatientId."
+                    });
+                }
+
+                //Calculate Date Range 
+                var today = DateTime.UtcNow.Date;
+                var fiveDaysFromNow = today.AddDays(5);
+                var appointments = await _context.PatientAppointmentBooking
+                    .Where(a => a.PatientID == user.PatientId && a.Status == "confirmed")
+                    .OrderByDescending(a => a.ProviderAvailableDate)
+                    .ToListAsync();
+                return Ok(new
+                {
+                    message = "Successfully retrieved appointments for the family.",
+                    appointments
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "An error occurred while retrieving appointments.",
+                    error = ex.Message
+                });
+            }
+        }
     }
 }
