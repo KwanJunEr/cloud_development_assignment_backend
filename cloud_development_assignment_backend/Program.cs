@@ -69,7 +69,7 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    // app.MapOpenApi(); // Only available in NET 9.0
 }
 
 // Use CORS
