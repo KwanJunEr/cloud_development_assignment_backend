@@ -128,7 +128,9 @@ public class Function
         var followUp = await dbContext.FollowUps.FirstOrDefaultAsync(f => f.Id == id);
 
         if (followUp == null)
+        {
             return CreateErrorResponse(404, "Follow-up not found");
+        }
 
         var user = dbContext.Users.FirstOrDefault(u => u.Id == followUp.PatientId);
         var dto = new FollowUpOutputDto
@@ -154,7 +156,9 @@ public class Function
         var patientId = int.Parse(path.Split('/')[3]);
         var user = await dbContext.Users.FirstOrDefaultAsync(u => u.Id == patientId);
         if (user == null)
+        {
             return CreateErrorResponse(404, $"Patient with ID {patientId} not found");
+        }
 
         var followUps = await dbContext.FollowUps
             .Where(f => f.PatientId == patientId)
@@ -246,7 +250,9 @@ public class Function
         var status = parts[5];
 
         if (string.IsNullOrEmpty(status) || !(status == "pending" || status == "scheduled" || status == "resolved"))
+        {
             return CreateErrorResponse(400, "Invalid status. Valid values are: pending, scheduled, resolved");
+        }
 
         var followUps = await dbContext.FollowUps
             .Where(f => f.PhysicianId == physicianId && f.Status.ToLower() == status.ToLower())
@@ -282,7 +288,9 @@ public class Function
         var urgencyLevel = parts[5];
 
         if (string.IsNullOrEmpty(urgencyLevel) || !(urgencyLevel == "low" || urgencyLevel == "medium" || urgencyLevel == "high"))
+        {
             return CreateErrorResponse(400, "Invalid urgency level. Valid values are: low, medium, high");
+        }
 
         var followUps = await dbContext.FollowUps
             .Where(f => f.PhysicianId == physicianId && f.UrgencyLevel.ToLower() == urgencyLevel.ToLower())
@@ -368,7 +376,9 @@ public class Function
 
             string urgency = dto.UrgencyLevel.ToLower();
             if (urgency != "low" && urgency != "medium" && urgency != "high")
+            {
                 return CreateErrorResponse(400, "Invalid urgency level. Valid values are: low, medium, high");
+            }
 
             Console.WriteLine("DEBUG: Creating FollowUp entity...");
             var followUp = new FollowUp
@@ -418,11 +428,15 @@ public class Function
         var id = int.Parse(path.Split('/')[2]);
         var status = JsonSerializer.Deserialize<string>(request.Body);
         if (string.IsNullOrEmpty(status))
+        {
             return CreateErrorResponse(400, "Status is required");
+        }
 
         var followUp = await dbContext.FollowUps.FirstOrDefaultAsync(f => f.Id == id);
         if (followUp == null)
+        {
             return CreateErrorResponse(404, "Follow-up not found");
+        }
 
         followUp.Status = status;
         await dbContext.SaveChangesAsync();
@@ -435,7 +449,9 @@ public class Function
         var id = int.Parse(path.Split('/')[2]);
         var followUp = await dbContext.FollowUps.FirstOrDefaultAsync(f => f.Id == id);
         if (followUp == null)
+        {
             return CreateErrorResponse(404, "Follow-up not found");
+        }
 
         followUp.Status = "resolved";
         await dbContext.SaveChangesAsync();
@@ -443,7 +459,6 @@ public class Function
         return CreateSuccessResponse(new { message = "Marked as resolved" }, 204);
     }
 
-    // --- Helper Methods ---
 
     private bool IsGetByIdPattern(string path)
     {

@@ -61,37 +61,34 @@ public class Function
         var method = request.HttpMethod.ToUpper();
 
         // Routing
-        if (path == "/prescription" && method == "GET")
-            return await GetAllPrescriptions(dbContext);
+        return (path, method) switch
+        {
+            ("/prescription", "GET") => await GetAllPrescriptions(dbContext),
+            _ when path.StartsWith("/prescription/") && method == "GET" && IsGetByIdPattern(path) =>
+                await GetPrescriptionById(path, dbContext),
 
-        if (path.StartsWith("/prescription/") && method == "GET" && IsGetByIdPattern(path))
-            return await GetPrescriptionById(path, dbContext);
+            _ when path.StartsWith("/prescription/patient/") && method == "GET" =>
+                await GetPrescriptionsByPatientId(path, dbContext),
+            ("/prescription", "POST") => await CreatePrescription(request, dbContext),
 
-        if (path.StartsWith("/prescription/patient/") && method == "GET")
-            return await GetPrescriptionsByPatientId(path, dbContext);
+            _ when path.StartsWith("/prescription/") && method == "PUT" && IsGetByIdPattern(path) =>
+                await UpdatePrescription(path, request, dbContext),
 
-        if (path == "/prescription" && method == "POST")
-            return await CreatePrescription(request, dbContext);
+            _ when path.StartsWith("/prescription/") && method == "DELETE" && IsGetByIdPattern(path) =>
+                await DeletePrescription(path, dbContext),
 
-        if (path.StartsWith("/prescription/") && method == "PUT" && IsGetByIdPattern(path))
-            return await UpdatePrescription(path, request, dbContext);
+            _ when path.Contains("/medications") && method == "POST" =>
+                await AddMedicationToPrescription(path, request, dbContext),
 
-        if (path.StartsWith("/prescription/") && method == "DELETE" && IsGetByIdPattern(path))
-            return await DeletePrescription(path, dbContext);
+            _ when path.Contains("/medications/") && method == "DELETE" =>
+                await RemoveMedicationFromPrescription(path, dbContext),
 
-        if (path.Contains("/medications") && method == "POST")
-            return await AddMedicationToPrescription(path, request, dbContext);
+            _ when path.Contains("/medications") && method == "GET" =>
+                await GetMedicationsForPrescription(path, dbContext),
+            (_, "OPTIONS") => CorsResponse(),
 
-        if (path.Contains("/medications/") && method == "DELETE")
-            return await RemoveMedicationFromPrescription(path, dbContext);
-
-        if (path.Contains("/medications") && method == "GET")
-            return await GetMedicationsForPrescription(path, dbContext);
-
-        if (method == "OPTIONS")
-            return CorsResponse();
-
-        return ErrorResponse(404, "Endpoint not found");
+            _ => ErrorResponse(404, "Endpoint not found")
+        };
     }
 
     // --- Endpoint Implementations ---
@@ -325,8 +322,6 @@ public class Function
 
         return Ok(result);
     }
-
-    // --- Helper Methods ---
 
     private int ExtractId(string path, int index)
     {

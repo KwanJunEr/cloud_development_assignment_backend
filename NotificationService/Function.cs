@@ -462,7 +462,10 @@ public class Function
     {
         var parts = path.Split('/');
         if (parts.Length >= 3 && int.TryParse(parts[2], out var id))
+        {
             return id;
+        }
+
         return null;
     }
 
@@ -470,7 +473,10 @@ public class Function
     {
         var parts = path.Split('/');
         if (parts.Length >= 3 && int.TryParse(parts[2], out var id))
+        {
             return id;
+        }
+
         return null;
     }
 
