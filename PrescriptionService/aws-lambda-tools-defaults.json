@@ -21,6 +21,7 @@
     "function-subnets"      : "",
     "function-security-groups" : "",
     "tracing-mode"             : "PassThrough",
-    "environment-variables"    : "",
-    "image-tag"                : ""
+    "environment-variables"    : "\"CONNECTION_STRING\"=\"Server=diabetecares-db.cass5qmxqxlg.us-east-1.rds.amazonaws.com;Database=diabetecare;User Id=admin;Password=admin123;TrustServerCertificate=True;\";\"S3_BUCKET_NAME\"=\"\"",
+    "image-tag"                : "",
+    "function-description"     : ""
 }

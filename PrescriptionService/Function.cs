@@ -6,6 +6,7 @@ using System.Text.Json;
 using cloud_development_assignment_backend.Data;
 using cloud_development_assignment_backend.Models;
 using cloud_development_assignment_backend.DTO;
+using Amazon.S3;
 
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.SystemTextJson.DefaultLambdaJsonSerializer))]
@@ -23,6 +24,7 @@ public class Function
     /// <returns></returns>
     private readonly IServiceProvider _serviceProvider;
 
+
     public Function()
     {
         var services = new ServiceCollection();
@@ -36,6 +38,8 @@ public class Function
 
         services.AddDbContext<AppDbContext>(options =>
             options.UseSqlServer(connectionString));
+
+        services.AddAWSService<IAmazonS3>();
     }
 
     public async Task<APIGatewayProxyResponse> FunctionHandler(APIGatewayProxyRequest request, ILambdaContext context)
@@ -44,7 +48,8 @@ public class Function
         {
             using var scope = _serviceProvider.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            return await ProcessRequest(request, dbContext, context);
+            var s3Client = scope.ServiceProvider.GetRequiredService<IAmazonS3>();
+            return await ProcessRequest(request, dbContext, context, s3Client);
         }
         catch (Exception ex)
         {
@@ -55,7 +60,8 @@ public class Function
     private async Task<APIGatewayProxyResponse> ProcessRequest(
         APIGatewayProxyRequest request,
         AppDbContext dbContext,
-        ILambdaContext context)
+        ILambdaContext context,
+        IAmazonS3 s3Client)
     {
         var path = request.Path.ToLower();
         var method = request.HttpMethod.ToUpper();
@@ -69,7 +75,7 @@ public class Function
 
             _ when path.StartsWith("/prescription/patient/") && method == "GET" =>
                 await GetPrescriptionsByPatientId(path, dbContext),
-            ("/prescription", "POST") => await CreatePrescription(request, dbContext),
+            ("/prescription", "POST") => await CreatePrescription(request, dbContext, s3Client),
 
             _ when path.StartsWith("/prescription/") && method == "PUT" && IsGetByIdPattern(path) =>
                 await UpdatePrescription(path, request, dbContext),
@@ -129,7 +135,10 @@ public class Function
         return Ok(result);
     }
 
-    private async Task<APIGatewayProxyResponse> CreatePrescription(APIGatewayProxyRequest request, AppDbContext dbContext)
+    private async Task<APIGatewayProxyResponse> CreatePrescription(
+        APIGatewayProxyRequest request, 
+        AppDbContext dbContext,
+        IAmazonS3 s3Client)
     {
         if (string.IsNullOrEmpty(request.Body))
             return ErrorResponse(400, "Prescription data is required");
@@ -172,6 +181,31 @@ public class Function
 
         dbContext.Prescriptions.Add(prescription);
         await dbContext.SaveChangesAsync();
+
+        string bucketName = Environment.GetEnvironmentVariable("S3_BUCKET_NAME");
+        if (!string.IsNullOrEmpty(bucketName))
+        {
+            string s3Key = $"prescriptions/{prescription.Id}_{DateTime.UtcNow:yyyyMMddHHmmss}.json";
+            string s3Content = JsonSerializer.Serialize(new
+            {
+                prescription.Id,
+                prescription.PatientId,
+                prescription.PhysicianId,
+                prescription.Date,
+                prescription.Notes,
+                prescription.CreatedAt,
+                prescription.Medications
+            });
+
+            var putRequest = new Amazon.S3.Model.PutObjectRequest
+            {
+                BucketName = bucketName,
+                Key = s3Key,
+                ContentBody = s3Content
+            };
+
+            await s3Client.PutObjectAsync(putRequest);
+        }
 
         var created = await dbContext.Prescriptions
             .Include(p => p.Medications)
