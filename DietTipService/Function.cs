@@ -6,6 +6,7 @@ using System.Text.Json;
 using cloud_development_assignment_backend.Data;
 using cloud_development_assignment_backend.Models;
 using cloud_development_assignment_backend.DTO;
+using Amazon.SimpleNotificationService;
 
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.SystemTextJson.DefaultLambdaJsonSerializer))]
@@ -35,6 +36,7 @@ public class Function
         var connectionString = Environment.GetEnvironmentVariable("CONNECTION_STRING");
         services.AddDbContext<AppDbContext>(options =>
             options.UseSqlServer(connectionString));
+        services.AddAWSService<IAmazonSimpleNotificationService>();
     }
 
     public async Task<APIGatewayProxyResponse> FunctionHandler(APIGatewayProxyRequest request, ILambdaContext context)
@@ -43,7 +45,8 @@ public class Function
         {
             using var scope = _serviceProvider.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            return await ProcessRequest(request, dbContext);
+            var snsClient = scope.ServiceProvider.GetRequiredService<IAmazonSimpleNotificationService>();
+            return await ProcessRequest(request, dbContext, snsClient);
         }
         catch (Exception ex)
         {
@@ -51,7 +54,11 @@ public class Function
         }
     }
 
-    private async Task<APIGatewayProxyResponse> ProcessRequest(APIGatewayProxyRequest request, AppDbContext dbContext)
+
+    private async Task<APIGatewayProxyResponse> ProcessRequest(
+        APIGatewayProxyRequest request,
+        AppDbContext dbContext,
+        IAmazonSimpleNotificationService snsClient)
     {
         var path = request.Path.ToLower();
         var method = request.HttpMethod.ToUpper();
@@ -59,7 +66,7 @@ public class Function
         return (path, method) switch
         {
             ("/diettip", "GET") => await GetAllDietTips(dbContext),
-            ("/diettip", "POST") => await CreateDietTip(request, dbContext),
+            ("/diettip", "POST") => await CreateDietTip(request, dbContext, snsClient),
             _ when path.StartsWith("/diettip/dietician/") && method == "GET" =>
                 await GetByDieticianId(path, dbContext),
             _ when path.StartsWith("/diettip/") && method == "PUT" =>
@@ -72,7 +79,10 @@ public class Function
         };
     }
 
-    private async Task<APIGatewayProxyResponse> CreateDietTip(APIGatewayProxyRequest request, AppDbContext dbContext)
+    private async Task<APIGatewayProxyResponse> CreateDietTip(
+        APIGatewayProxyRequest request,
+        AppDbContext dbContext,
+        IAmazonSimpleNotificationService snsClient)
     {
         var dto = JsonSerializer.Deserialize<CreateDietTipDto>(request.Body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         if (dto == null)
@@ -91,6 +101,24 @@ public class Function
 
         dbContext.DietTip.Add(dietTip);
         await dbContext.SaveChangesAsync();
+
+        var topicArn = Environment.GetEnvironmentVariable("SNS_TOPIC_ARN");
+        if (!string.IsNullOrEmpty(topicArn))
+        {
+            var message =
+                $"Event: DietTipCreated\n" +
+                $"DietTipId: {dietTip.Id}\n" +
+                $"DieticianId: {dietTip.DieticianId}\n" +
+                $"Title: {dietTip.Title}\n" +
+                $"CreatedAt: {dietTip.CreatedAt:yyyy-MM-ddTHH:mm:ssZ}";
+
+            await snsClient.PublishAsync(new Amazon.SimpleNotificationService.Model.PublishRequest
+            {
+                TopicArn = topicArn,
+                Message = message,
+                Subject = "New DietTip Created"
+            });
+        }
 
         return Ok(new { message = "Created DietTip Successfully", dietTip }, 201);
     }
