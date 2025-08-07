@@ -6,6 +6,7 @@ using System.Text.Json;
 using cloud_development_assignment_backend.Data;
 using cloud_development_assignment_backend.Models;
 using cloud_development_assignment_backend.DTO;
+using Amazon;
 using Amazon.S3;
 
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
@@ -42,7 +43,8 @@ public class Function
         services.AddAWSService<IAmazonS3>();
     }
 
-    public async Task<APIGatewayProxyResponse> FunctionHandler(APIGatewayProxyRequest request, ILambdaContext context)
+    public async Task<APIGatewayProxyResponse> FunctionHandler(
+        APIGatewayProxyRequest request, ILambdaContext context)
     {
         try
         {
@@ -58,37 +60,28 @@ public class Function
     }
 
     private async Task<APIGatewayProxyResponse> ProcessRequest(
-        APIGatewayProxyRequest request,
-        AppDbContext dbContext,
-        ILambdaContext context,
-        IAmazonS3 s3Client)
+        APIGatewayProxyRequest request,AppDbContext dbContext,
+        ILambdaContext context,IAmazonS3 s3Client)
     {
         var path = request.Path.ToLower();
         var method = request.HttpMethod.ToUpper();
 
-        // Routing
         return (path, method) switch
         {
             ("/prescription", "GET") => await GetAllPrescriptions(dbContext),
             _ when path.StartsWith("/prescription/") && method == "GET" && IsGetByIdPattern(path) =>
                 await GetPrescriptionById(path, dbContext),
-
             _ when path.StartsWith("/prescription/patient/") && method == "GET" =>
                 await GetPrescriptionsByPatientId(path, dbContext),
             ("/prescription", "POST") => await CreatePrescription(request, dbContext, s3Client),
-
             _ when path.StartsWith("/prescription/") && method == "PUT" && IsGetByIdPattern(path) =>
                 await UpdatePrescription(path, request, dbContext),
-
             _ when path.StartsWith("/prescription/") && method == "DELETE" && IsGetByIdPattern(path) =>
                 await DeletePrescription(path, dbContext),
-
             _ when path.Contains("/medications") && method == "POST" =>
                 await AddMedicationToPrescription(path, request, dbContext),
-
             _ when path.Contains("/medications/") && method == "DELETE" =>
                 await RemoveMedicationFromPrescription(path, dbContext),
-
             _ when path.Contains("/medications") && method == "GET" =>
                 await GetMedicationsForPrescription(path, dbContext),
             (_, "OPTIONS") => CorsResponse(),
@@ -136,28 +129,29 @@ public class Function
     }
 
     private async Task<APIGatewayProxyResponse> CreatePrescription(
-        APIGatewayProxyRequest request, 
-        AppDbContext dbContext,
-        IAmazonS3 s3Client)
+        APIGatewayProxyRequest request, AppDbContext dbContext,IAmazonS3 s3Client)
     {
         if (string.IsNullOrEmpty(request.Body))
+        {
             return ErrorResponse(400, "Prescription data is required");
+        }
 
-        var dto = JsonSerializer.Deserialize<PrescriptionDto>(request.Body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        var dto = JsonSerializer.Deserialize<PrescriptionDto>(
+            request.Body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         if (dto == null)
+        {
             return ErrorResponse(400, "Invalid prescription data");
+        }
 
         if (dto.PatientId == 0)
+        {
             return ErrorResponse(400, "PatientId is a required field");
+        }
 
         var prescription = new Prescription
         {
-            PatientId = dto.PatientId,
-            Date = dto.Date,
-            Notes = dto.Notes,
-            PhysicianId = dto.PhysicianId,
-            CreatedAt = DateTime.UtcNow,
-            Medications = new List<Medication>()
+            PatientId = dto.PatientId, Date = dto.Date, Notes = dto.Notes, 
+            PhysicianId = dto.PhysicianId, CreatedAt = DateTime.UtcNow, Medications = new List<Medication>()
         };
 
         if (dto.Medications != null)
@@ -166,15 +160,9 @@ public class Function
             {
                 prescription.Medications.Add(new Medication
                 {
-                    Name = m.Name,
-                    Dosage = m.Dosage,
-                    Frequency = m.Frequency,
-                    Duration = m.Duration,
-                    Notes = m.Notes,
-                    StartDate = m.StartDate,
-                    EndDate = m.EndDate,
-                    CreatedAt = DateTime.UtcNow,
-                    IsActive = true
+                    Name = m.Name, Dosage = m.Dosage, Frequency = m.Frequency, Duration = m.Duration, 
+                    Notes = m.Notes, StartDate = m.StartDate, EndDate = m.EndDate, 
+                    CreatedAt = DateTime.UtcNow, IsActive = true
                 });
             }
         }
@@ -194,7 +182,19 @@ public class Function
                 prescription.Date,
                 prescription.Notes,
                 prescription.CreatedAt,
-                prescription.Medications
+                Medications = prescription.Medications.Select(m => new {
+                    m.Id,
+                    m.Name,
+                    m.Dosage,
+                    m.Frequency,
+                    m.Duration,
+                    m.Notes,
+                    m.StartDate,
+                    m.EndDate,
+                    m.IsActive,
+                    m.CreatedAt,
+                    m.UpdatedAt
+                }).ToList()
             });
 
             var putRequest = new Amazon.S3.Model.PutObjectRequest

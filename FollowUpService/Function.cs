@@ -43,7 +43,8 @@ public class Function
         services.AddAWSService<IAmazonSimpleNotificationService>();
     }
 
-    public async Task<APIGatewayProxyResponse> FunctionHandler(APIGatewayProxyRequest request, ILambdaContext context)
+    public async Task<APIGatewayProxyResponse> FunctionHandler(
+        APIGatewayProxyRequest request, ILambdaContext context)
     {
         context.Logger.LogInformation($"Processing {request.HttpMethod} {request.Path}");
 
@@ -53,26 +54,21 @@ public class Function
             var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var snsClient = scope.ServiceProvider.GetRequiredService<IAmazonSimpleNotificationService>();
             var result = await ProcessRequest(request, dbContext, context, snsClient);
-            context.Logger.LogInformation($"Request completed successfully with status {result.StatusCode}");
             return result;
         }
         catch (Exception ex)
         {
-            context.Logger.LogError($"Error processing request: {ex.Message}");
             return CreateErrorResponse(500, "Internal server error", ex.Message);
         }
     }
 
     private async Task<APIGatewayProxyResponse> ProcessRequest(
-        APIGatewayProxyRequest request,
-        AppDbContext dbContext,
-        ILambdaContext context,
-        IAmazonSimpleNotificationService snsClient)
+        APIGatewayProxyRequest request, AppDbContext dbContext,
+        ILambdaContext context, IAmazonSimpleNotificationService snsClient)
     {
         var path = request.Path.ToLower();
         var method = request.HttpMethod.ToUpper();
 
-        // Routing
         return (path, method) switch
         {
             ("/followup", "GET") => await GetAllFollowUps(dbContext),
@@ -326,21 +322,17 @@ public class Function
     }
 
     private async Task<APIGatewayProxyResponse> CreateFollowUp(
-        APIGatewayProxyRequest request,
-        AppDbContext dbContext,
+        APIGatewayProxyRequest request,AppDbContext dbContext,
         IAmazonSimpleNotificationService snsClient)
     {
         if (string.IsNullOrEmpty(request.Body))
         {
-            Console.WriteLine("Request body is empty.");
             return CreateErrorResponse(400, "Follow-up data is required");
         }
-            
-
-        var dto = JsonSerializer.Deserialize<FollowUpDto>(request.Body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        var dto = JsonSerializer.Deserialize<FollowUpDto>(request.Body, 
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         if (dto == null)
         {
-            Console.WriteLine("DTO is null after deserialization.");
             return CreateErrorResponse(400, "Invalid follow-up data.");
         }
 

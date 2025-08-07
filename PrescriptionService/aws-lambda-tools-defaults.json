@@ -21,7 +21,7 @@
     "function-subnets"      : "",
     "function-security-groups" : "",
     "tracing-mode"             : "PassThrough",
-    "environment-variables"    : "\"CONNECTION_STRING\"=\"Server=diabetecares-db.cass5qmxqxlg.us-east-1.rds.amazonaws.com;Database=diabetecare;User Id=admin;Password=admin123;TrustServerCertificate=True;\";\"S3_BUCKET_NAME\"=\"\"",
+    "environment-variables"    : "\"CONNECTION_STRING\"=\"Server=diabetecares-db.cass5qmxqxlg.us-east-1.rds.amazonaws.com;Database=diabetecare;User Id=admin;Password=admin123;TrustServerCertificate=True;\";\"S3_BUCKET_NAME\"=\"diabetecare-prescriptionbucket\"",
     "image-tag"                : "",
     "function-description"     : ""
 }

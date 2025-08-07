@@ -44,7 +44,8 @@ public class Function
         services.AddAWSService<IAmazonSimpleNotificationService>();
     }
 
-    public async Task<APIGatewayProxyResponse> FunctionHandler(APIGatewayProxyRequest request, ILambdaContext context)
+    public async Task<APIGatewayProxyResponse> FunctionHandler(
+        APIGatewayProxyRequest request, ILambdaContext context)
     {
         context.Logger.LogInformation($"Processing {request.HttpMethod} {request.Path}");
 
@@ -53,55 +54,36 @@ public class Function
             using var scope = _serviceProvider.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var snsClient = scope.ServiceProvider.GetRequiredService<IAmazonSimpleNotificationService>();
-
             var result = await ProcessRequest(request, dbContext, snsClient, context);
-            context.Logger.LogInformation($"Request completed successfully with status {result.StatusCode}");
             return result;
         }
         catch (Exception ex)
         {
-            context.Logger.LogError($"Error processing request: {ex.Message}");
-            context.Logger.LogError($"Stack trace: {ex.StackTrace}");
             return CreateErrorResponse(500, "Internal server error", ex.Message);
         }
     }
 
     private async Task<APIGatewayProxyResponse> ProcessRequest(
-        APIGatewayProxyRequest request,
-        AppDbContext dbContext,
-        IAmazonSimpleNotificationService snsClient,
-        ILambdaContext context)
+        APIGatewayProxyRequest request,AppDbContext dbContext,
+        IAmazonSimpleNotificationService snsClient,ILambdaContext context)
     {
         var path = request.Path.ToLower();
         var method = request.HttpMethod.ToUpper();
 
         return (path, method) switch
         {
-            // POST /notifications
             ("/notifications", "POST") =>
                 await CreateNotification(request, dbContext, snsClient, context),
-
-            // GET /notifications/{physicianId}
             _ when path.StartsWith("/notifications/") && method == "GET" && IsGetNotificationsPattern(path) =>
                 await GetNotifications(request, dbContext, context),
-
-            // GET /notifications/{physicianId}/unread
             _ when path.Contains("/notifications/") && path.EndsWith("/unread") && method == "GET" =>
                 await GetUnreadNotifications(request, dbContext, context),
-
-            // GET /notifications/{physicianId}/type/{type}
             _ when path.Contains("/notifications/") && path.Contains("/type/") && method == "GET" =>
                 await GetNotificationsByType(request, dbContext, context),
-
-            // PUT /notification/{notificationId}/read
             _ when path.StartsWith("/notification/") && path.EndsWith("/read") && method == "PUT" =>
                 await MarkAsRead(request, dbContext, context),
-
-            // DELETE /notification/{notificationId}
             _ when path.StartsWith("/notification/") && method == "DELETE" && IsDeleteNotificationPattern(path) =>
                 await DeleteNotification(request, dbContext, context),
-
-            // OPTIONS requests for CORS
             (_, "OPTIONS") => CreateCorsResponse(),
 
             _ => CreateErrorResponse(404, "Endpoint not found")
@@ -259,27 +241,24 @@ public class Function
     }
 
     private async Task<APIGatewayProxyResponse> CreateNotification(
-        APIGatewayProxyRequest request,
-        AppDbContext dbContext,
-        IAmazonSimpleNotificationService snsClient,
-        ILambdaContext context)
+        APIGatewayProxyRequest request,AppDbContext dbContext,
+        IAmazonSimpleNotificationService snsClient,ILambdaContext context)
     {
         try
         {
             if (string.IsNullOrEmpty(request.Body))
             {
-                context.Logger.LogWarning("Create notification request received with empty body");
                 return CreateErrorResponse(400, "Request body is required");
             }
 
-            var createDto = JsonSerializer.Deserialize<CreateNotificationDto>(request.Body, new JsonSerializerOptions
+            var createDto = JsonSerializer.Deserialize<CreateNotificationDto>(
+                request.Body, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             });
 
             if (createDto == null)
             {
-                context.Logger.LogWarning("Failed to deserialize notification request body");
                 return CreateErrorResponse(400, "Invalid request body");
             }
 
@@ -287,7 +266,6 @@ public class Function
                 string.IsNullOrEmpty(createDto.Message) ||
                 string.IsNullOrEmpty(createDto.Type))
             {
-                context.Logger.LogWarning($"Invalid notification data - PhysicianId: {createDto.PhysicianId}, Message: {!string.IsNullOrEmpty(createDto.Message)}, Type: {!string.IsNullOrEmpty(createDto.Type)}");
                 return CreateErrorResponse(400, "PhysicianId, Message, and Type are required fields");
             }
 
@@ -317,12 +295,10 @@ public class Function
             try
             {
                 await PublishToSNS(snsClient, notification, context);
-                Console.WriteLine("SNS Done");
             }
             catch (Exception ex)
             {
                 context.Logger.LogError($"Failed to publish to SNS: {ex.Message}");
-                Console.WriteLine("SNS Fail");
             }
 
             var responseDto = new PhysicianNotificationOutputDto
