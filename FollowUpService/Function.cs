@@ -7,6 +7,8 @@ using cloud_development_assignment_backend.Models;
 using cloud_development_assignment_backend.DTO;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Amazon.SimpleNotificationService;
+
 
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.SystemTextJson.DefaultLambdaJsonSerializer))]
@@ -37,9 +39,12 @@ public class Function
 
         services.AddDbContext<AppDbContext>(options =>
             options.UseSqlServer(connectionString));
+
+        services.AddAWSService<IAmazonSimpleNotificationService>();
     }
 
-    public async Task<APIGatewayProxyResponse> FunctionHandler(APIGatewayProxyRequest request, ILambdaContext context)
+    public async Task<APIGatewayProxyResponse> FunctionHandler(
+        APIGatewayProxyRequest request, ILambdaContext context)
     {
         context.Logger.LogInformation($"Processing {request.HttpMethod} {request.Path}");
 
@@ -47,26 +52,23 @@ public class Function
         {
             using var scope = _serviceProvider.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var result = await ProcessRequest(request, dbContext, context);
-            context.Logger.LogInformation($"Request completed successfully with status {result.StatusCode}");
+            var snsClient = scope.ServiceProvider.GetRequiredService<IAmazonSimpleNotificationService>();
+            var result = await ProcessRequest(request, dbContext, context, snsClient);
             return result;
         }
         catch (Exception ex)
         {
-            context.Logger.LogError($"Error processing request: {ex.Message}");
             return CreateErrorResponse(500, "Internal server error", ex.Message);
         }
     }
 
     private async Task<APIGatewayProxyResponse> ProcessRequest(
-        APIGatewayProxyRequest request,
-        AppDbContext dbContext,
-        ILambdaContext context)
+        APIGatewayProxyRequest request, AppDbContext dbContext,
+        ILambdaContext context, IAmazonSimpleNotificationService snsClient)
     {
         var path = request.Path.ToLower();
         var method = request.HttpMethod.ToUpper();
 
-        // Routing
         return (path, method) switch
         {
             ("/followup", "GET") => await GetAllFollowUps(dbContext),
@@ -82,7 +84,7 @@ public class Function
                 await GetFollowUpsByStatus(path, dbContext),
             _ when path.StartsWith("/followup/physician/") && path.Contains("/urgency/") && method == "GET" =>
                 await GetFollowUpsByUrgency(path, dbContext),
-            ("/followup", "POST") => await CreateFollowUp(request, dbContext),
+            ("/followup", "POST") => await CreateFollowUp(request, dbContext, snsClient),
             _ when path.StartsWith("/followup/") && path.EndsWith("/status") && method == "PUT" =>
                 await UpdateFollowUpStatus(path, request, dbContext),
             _ when path.StartsWith("/followup/") && path.EndsWith("/resolve") && method == "PUT" =>
@@ -128,7 +130,9 @@ public class Function
         var followUp = await dbContext.FollowUps.FirstOrDefaultAsync(f => f.Id == id);
 
         if (followUp == null)
+        {
             return CreateErrorResponse(404, "Follow-up not found");
+        }
 
         var user = dbContext.Users.FirstOrDefault(u => u.Id == followUp.PatientId);
         var dto = new FollowUpOutputDto
@@ -154,7 +158,9 @@ public class Function
         var patientId = int.Parse(path.Split('/')[3]);
         var user = await dbContext.Users.FirstOrDefaultAsync(u => u.Id == patientId);
         if (user == null)
+        {
             return CreateErrorResponse(404, $"Patient with ID {patientId} not found");
+        }
 
         var followUps = await dbContext.FollowUps
             .Where(f => f.PatientId == patientId)
@@ -246,7 +252,9 @@ public class Function
         var status = parts[5];
 
         if (string.IsNullOrEmpty(status) || !(status == "pending" || status == "scheduled" || status == "resolved"))
+        {
             return CreateErrorResponse(400, "Invalid status. Valid values are: pending, scheduled, resolved");
+        }
 
         var followUps = await dbContext.FollowUps
             .Where(f => f.PhysicianId == physicianId && f.Status.ToLower() == status.ToLower())
@@ -282,7 +290,9 @@ public class Function
         var urgencyLevel = parts[5];
 
         if (string.IsNullOrEmpty(urgencyLevel) || !(urgencyLevel == "low" || urgencyLevel == "medium" || urgencyLevel == "high"))
+        {
             return CreateErrorResponse(400, "Invalid urgency level. Valid values are: low, medium, high");
+        }
 
         var followUps = await dbContext.FollowUps
             .Where(f => f.PhysicianId == physicianId && f.UrgencyLevel.ToLower() == urgencyLevel.ToLower())
@@ -311,25 +321,20 @@ public class Function
         return CreateSuccessResponse(result);
     }
 
-    private async Task<APIGatewayProxyResponse> CreateFollowUp(APIGatewayProxyRequest request, AppDbContext dbContext)
+    private async Task<APIGatewayProxyResponse> CreateFollowUp(
+        APIGatewayProxyRequest request,AppDbContext dbContext,
+        IAmazonSimpleNotificationService snsClient)
     {
-        Console.WriteLine($"DEBUG: Received request body: {request.Body}");
-
         if (string.IsNullOrEmpty(request.Body))
         {
-            Console.WriteLine("DEBUG: Request body is empty.");
             return CreateErrorResponse(400, "Follow-up data is required");
         }
-            
-
-        var dto = JsonSerializer.Deserialize<FollowUpDto>(request.Body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        var dto = JsonSerializer.Deserialize<FollowUpDto>(request.Body, 
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         if (dto == null)
         {
-            Console.WriteLine("DEBUG: DTO is null after deserialization.");
             return CreateErrorResponse(400, "Invalid follow-up data.");
         }
-
-        Console.WriteLine($"DEBUG: DTO: PatientId={dto.PatientId}, PhysicianId={dto.PhysicianId}");
 
         if (dto.PatientId == 0)
         {
@@ -350,27 +355,26 @@ public class Function
 
         try
         {
-            Console.WriteLine("DEBUG: Querying for patient...");
             var user = dbContext.Users.FirstOrDefault(u => u.Id == dto.PatientId);
             if (user == null)
             {
-                Console.WriteLine("DEBUG: Patient not found.");
+                Console.WriteLine("Patient not found.");
                 return CreateErrorResponse(404, $"Patient with ID {dto.PatientId} not found");
             }
 
-            Console.WriteLine("DEBUG: Querying for physician...");
             var physician = dbContext.Users.FirstOrDefault(u => u.Id == dto.PhysicianId);
             if (physician == null)
             {
-                Console.WriteLine("DEBUG: Physician not found.");
+                Console.WriteLine("Physician not found.");
                 return CreateErrorResponse(404, $"Physician with ID {dto.PhysicianId} not found");
             }
 
             string urgency = dto.UrgencyLevel.ToLower();
             if (urgency != "low" && urgency != "medium" && urgency != "high")
+            {
                 return CreateErrorResponse(400, "Invalid urgency level. Valid values are: low, medium, high");
+            }
 
-            Console.WriteLine("DEBUG: Creating FollowUp entity...");
             var followUp = new FollowUp
             {
                 PatientId = dto.PatientId,
@@ -385,8 +389,27 @@ public class Function
             };
 
             dbContext.FollowUps.Add(followUp);
-            Console.WriteLine("DEBUG: Saving changes...");
             await dbContext.SaveChangesAsync();
+
+            var topicArn = Environment.GetEnvironmentVariable("SNS_TOPIC_ARN");
+            if (!string.IsNullOrEmpty(topicArn))
+            {
+                var message =
+                    $"Event: Follow Up Created\n" +
+                    $"FollowUpId: {followUp.Id}\n" +
+                    $"PatientId: {followUp.PatientId}\n" +
+                    $"PhysicianId: {followUp.PhysicianId}\n" +
+                    $"FlaggedDate: {followUp.FlaggedDate:yyyy-MM-ddTHH:mm:ssZ}\n" +
+                    $"UrgencyLevel: {followUp.UrgencyLevel}\n" +
+                    $"Status: {followUp.Status}";
+
+                await snsClient.PublishAsync(new Amazon.SimpleNotificationService.Model.PublishRequest
+                {
+                    TopicArn = topicArn,
+                    Message = message,
+                    Subject = "New Follow-Up Created"
+                });
+            }
 
             var outputDto = new FollowUpOutputDto
             {
@@ -403,12 +426,10 @@ public class Function
                 FollowUpNotes = followUp.FollowUpNotes ?? ""
             };
 
-            Console.WriteLine("DEBUG: Returning success response.");
             return CreateSuccessResponse(outputDto, 201);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"DEBUG: Exception occurred: {ex}");
             return CreateErrorResponse(500, "Internal server error", ex.Message);
         }
     }
@@ -418,11 +439,15 @@ public class Function
         var id = int.Parse(path.Split('/')[2]);
         var status = JsonSerializer.Deserialize<string>(request.Body);
         if (string.IsNullOrEmpty(status))
+        {
             return CreateErrorResponse(400, "Status is required");
+        }
 
         var followUp = await dbContext.FollowUps.FirstOrDefaultAsync(f => f.Id == id);
         if (followUp == null)
+        {
             return CreateErrorResponse(404, "Follow-up not found");
+        }
 
         followUp.Status = status;
         await dbContext.SaveChangesAsync();
@@ -435,7 +460,9 @@ public class Function
         var id = int.Parse(path.Split('/')[2]);
         var followUp = await dbContext.FollowUps.FirstOrDefaultAsync(f => f.Id == id);
         if (followUp == null)
+        {
             return CreateErrorResponse(404, "Follow-up not found");
+        }
 
         followUp.Status = "resolved";
         await dbContext.SaveChangesAsync();
@@ -443,7 +470,6 @@ public class Function
         return CreateSuccessResponse(new { message = "Marked as resolved" }, 204);
     }
 
-    // --- Helper Methods ---
 
     private bool IsGetByIdPattern(string path)
     {
