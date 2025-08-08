@@ -6,6 +6,8 @@ using System.Text.Json;
 using cloud_development_assignment_backend.Data;
 using cloud_development_assignment_backend.Models;
 using cloud_development_assignment_backend.DTO;
+using Amazon;
+using Amazon.S3;
 
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.SystemTextJson.DefaultLambdaJsonSerializer))]
@@ -23,6 +25,7 @@ public class Function
     /// <returns></returns>
     private readonly IServiceProvider _serviceProvider;
 
+
     public Function()
     {
         var services = new ServiceCollection();
@@ -36,15 +39,19 @@ public class Function
 
         services.AddDbContext<AppDbContext>(options =>
             options.UseSqlServer(connectionString));
+
+        services.AddAWSService<IAmazonS3>();
     }
 
-    public async Task<APIGatewayProxyResponse> FunctionHandler(APIGatewayProxyRequest request, ILambdaContext context)
+    public async Task<APIGatewayProxyResponse> FunctionHandler(
+        APIGatewayProxyRequest request, ILambdaContext context)
     {
         try
         {
             using var scope = _serviceProvider.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            return await ProcessRequest(request, dbContext, context);
+            var s3Client = scope.ServiceProvider.GetRequiredService<IAmazonS3>();
+            return await ProcessRequest(request, dbContext, context, s3Client);
         }
         catch (Exception ex)
         {
@@ -53,45 +60,34 @@ public class Function
     }
 
     private async Task<APIGatewayProxyResponse> ProcessRequest(
-        APIGatewayProxyRequest request,
-        AppDbContext dbContext,
-        ILambdaContext context)
+        APIGatewayProxyRequest request,AppDbContext dbContext,
+        ILambdaContext context,IAmazonS3 s3Client)
     {
         var path = request.Path.ToLower();
         var method = request.HttpMethod.ToUpper();
 
-        // Routing
-        if (path == "/prescription" && method == "GET")
-            return await GetAllPrescriptions(dbContext);
+        return (path, method) switch
+        {
+            ("/prescription", "GET") => await GetAllPrescriptions(dbContext),
+            _ when path.StartsWith("/prescription/") && method == "GET" && IsGetByIdPattern(path) =>
+                await GetPrescriptionById(path, dbContext),
+            _ when path.StartsWith("/prescription/patient/") && method == "GET" =>
+                await GetPrescriptionsByPatientId(path, dbContext),
+            ("/prescription", "POST") => await CreatePrescription(request, dbContext, s3Client),
+            _ when path.StartsWith("/prescription/") && method == "PUT" && IsGetByIdPattern(path) =>
+                await UpdatePrescription(path, request, dbContext),
+            _ when path.StartsWith("/prescription/") && method == "DELETE" && IsGetByIdPattern(path) =>
+                await DeletePrescription(path, dbContext),
+            _ when path.Contains("/medications") && method == "POST" =>
+                await AddMedicationToPrescription(path, request, dbContext),
+            _ when path.Contains("/medications/") && method == "DELETE" =>
+                await RemoveMedicationFromPrescription(path, dbContext),
+            _ when path.Contains("/medications") && method == "GET" =>
+                await GetMedicationsForPrescription(path, dbContext),
+            (_, "OPTIONS") => CorsResponse(),
 
-        if (path.StartsWith("/prescription/") && method == "GET" && IsGetByIdPattern(path))
-            return await GetPrescriptionById(path, dbContext);
-
-        if (path.StartsWith("/prescription/patient/") && method == "GET")
-            return await GetPrescriptionsByPatientId(path, dbContext);
-
-        if (path == "/prescription" && method == "POST")
-            return await CreatePrescription(request, dbContext);
-
-        if (path.StartsWith("/prescription/") && method == "PUT" && IsGetByIdPattern(path))
-            return await UpdatePrescription(path, request, dbContext);
-
-        if (path.StartsWith("/prescription/") && method == "DELETE" && IsGetByIdPattern(path))
-            return await DeletePrescription(path, dbContext);
-
-        if (path.Contains("/medications") && method == "POST")
-            return await AddMedicationToPrescription(path, request, dbContext);
-
-        if (path.Contains("/medications/") && method == "DELETE")
-            return await RemoveMedicationFromPrescription(path, dbContext);
-
-        if (path.Contains("/medications") && method == "GET")
-            return await GetMedicationsForPrescription(path, dbContext);
-
-        if (method == "OPTIONS")
-            return CorsResponse();
-
-        return ErrorResponse(404, "Endpoint not found");
+            _ => ErrorResponse(404, "Endpoint not found")
+        };
     }
 
     // --- Endpoint Implementations ---
@@ -132,26 +128,30 @@ public class Function
         return Ok(result);
     }
 
-    private async Task<APIGatewayProxyResponse> CreatePrescription(APIGatewayProxyRequest request, AppDbContext dbContext)
+    private async Task<APIGatewayProxyResponse> CreatePrescription(
+        APIGatewayProxyRequest request, AppDbContext dbContext,IAmazonS3 s3Client)
     {
         if (string.IsNullOrEmpty(request.Body))
+        {
             return ErrorResponse(400, "Prescription data is required");
+        }
 
-        var dto = JsonSerializer.Deserialize<PrescriptionDto>(request.Body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        var dto = JsonSerializer.Deserialize<PrescriptionDto>(
+            request.Body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         if (dto == null)
+        {
             return ErrorResponse(400, "Invalid prescription data");
+        }
 
         if (dto.PatientId == 0)
+        {
             return ErrorResponse(400, "PatientId is a required field");
+        }
 
         var prescription = new Prescription
         {
-            PatientId = dto.PatientId,
-            Date = dto.Date,
-            Notes = dto.Notes,
-            PhysicianId = dto.PhysicianId,
-            CreatedAt = DateTime.UtcNow,
-            Medications = new List<Medication>()
+            PatientId = dto.PatientId, Date = dto.Date, Notes = dto.Notes, 
+            PhysicianId = dto.PhysicianId, CreatedAt = DateTime.UtcNow, Medications = new List<Medication>()
         };
 
         if (dto.Medications != null)
@@ -160,21 +160,52 @@ public class Function
             {
                 prescription.Medications.Add(new Medication
                 {
-                    Name = m.Name,
-                    Dosage = m.Dosage,
-                    Frequency = m.Frequency,
-                    Duration = m.Duration,
-                    Notes = m.Notes,
-                    StartDate = m.StartDate,
-                    EndDate = m.EndDate,
-                    CreatedAt = DateTime.UtcNow,
-                    IsActive = true
+                    Name = m.Name, Dosage = m.Dosage, Frequency = m.Frequency, Duration = m.Duration, 
+                    Notes = m.Notes, StartDate = m.StartDate, EndDate = m.EndDate, 
+                    CreatedAt = DateTime.UtcNow, IsActive = true
                 });
             }
         }
 
         dbContext.Prescriptions.Add(prescription);
         await dbContext.SaveChangesAsync();
+
+        string bucketName = Environment.GetEnvironmentVariable("S3_BUCKET_NAME");
+        if (!string.IsNullOrEmpty(bucketName))
+        {
+            string s3Key = $"prescriptions/{prescription.Id}_{DateTime.UtcNow:yyyyMMddHHmmss}.json";
+            string s3Content = JsonSerializer.Serialize(new
+            {
+                prescription.Id,
+                prescription.PatientId,
+                prescription.PhysicianId,
+                prescription.Date,
+                prescription.Notes,
+                prescription.CreatedAt,
+                Medications = prescription.Medications.Select(m => new {
+                    m.Id,
+                    m.Name,
+                    m.Dosage,
+                    m.Frequency,
+                    m.Duration,
+                    m.Notes,
+                    m.StartDate,
+                    m.EndDate,
+                    m.IsActive,
+                    m.CreatedAt,
+                    m.UpdatedAt
+                }).ToList()
+            });
+
+            var putRequest = new Amazon.S3.Model.PutObjectRequest
+            {
+                BucketName = bucketName,
+                Key = s3Key,
+                ContentBody = s3Content
+            };
+
+            await s3Client.PutObjectAsync(putRequest);
+        }
 
         var created = await dbContext.Prescriptions
             .Include(p => p.Medications)
@@ -325,8 +356,6 @@ public class Function
 
         return Ok(result);
     }
-
-    // --- Helper Methods ---
 
     private int ExtractId(string path, int index)
     {

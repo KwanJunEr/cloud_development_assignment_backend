@@ -13,15 +13,15 @@
     "function-runtime"      : "dotnet8",
     "function-memory-size"  : 512,
     "function-timeout"      : 30,
-    "function-handler"      : "PrescriptionService::PrescriptionService.Function::FunctionHandler",
+    "function-handler"      : "DietTipService::DietTipService.Function::FunctionHandler",
     "framework"             : "net8.0",
-    "function-name"         : "DiabeteCarePrescription",
+    "function-name"         : "DiabeteCareDietTip",
     "package-type"          : "Zip",
     "function-role"         : "arn:aws:iam::833221921661:role/LabRole",
     "function-subnets"      : "",
     "function-security-groups" : "",
     "tracing-mode"             : "PassThrough",
-    "environment-variables"    : "\"CONNECTION_STRING\"=\"Server=diabetecares-db.cass5qmxqxlg.us-east-1.rds.amazonaws.com;Database=diabetecare;User Id=admin;Password=admin123;TrustServerCertificate=True;\";\"S3_BUCKET_NAME\"=\"diabetecare-prescriptionbucket\"",
+    "environment-variables"    : "\"CONNECTION_STRING\"=\"Server=diabetecares-db.cass5qmxqxlg.us-east-1.rds.amazonaws.com;Database=diabetecare;User Id=admin;Password=admin123;TrustServerCertificate=True;\"",
     "image-tag"                : "",
     "function-description"     : ""
 }

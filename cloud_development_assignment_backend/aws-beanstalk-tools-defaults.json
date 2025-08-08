@@ -2,12 +2,21 @@
 {
     "region" : "us-east-1",
     "configuration" : "Debug",
-    "framework"     : "net9.0",
+    "framework"     : "net8.0",
     "self-contained" : false,
-    "application"    : "diabetecarebackend",
-    "environment"    : "Diabetecarebackend-env",
+    "application"    : "diabetecare-backend",
+    "environment"    : "diabetecare-backend-test",
     "enable-xray"    : false,
     "enhanced-health-type" : "basic",
-    "additional-options"   : "",
-    "proxy-server"         : "nginx"
+    "additional-options"   : "\"aws:autoscaling:launchconfiguration,SecurityGroups\"=\"sg-06e98b3ecb60857c6\";\"aws:ec2:vpc,Subnets\"=\"subnet-0aef1b21caa043e18\"",
+    "proxy-server"         : "nginx",
+    "solution-stack"       : "64bit Amazon Linux 2 v2.11.2 running .NET Core",
+    "environment-type"     : "SingleInstance",
+    "loadbalancer-type"    : "application",
+    "cname"                : "diabetecare-backend-test",
+    "instance-type"        : "t2.small",
+    "key-pair"             : "diabetecare",
+    "health-check-url"     : "/",
+    "instance-profile"     : "LabInstanceProfile",
+    "service-role"         : "LabRole"
 }
