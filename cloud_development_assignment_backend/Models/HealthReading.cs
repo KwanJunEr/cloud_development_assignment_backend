@@ -44,5 +44,7 @@ namespace cloud_development_assignment_backend.Models
         public string? Notes { get; set; }
 
         public string? Status { get; set; }
+
+        public string? ImageUrl { get; set; }
     }
 }

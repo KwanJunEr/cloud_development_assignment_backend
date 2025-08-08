@@ -1,0 +1,13 @@
+
+{
+    "region" : "us-east-1",
+    "configuration" : "Debug",
+    "framework"     : "net9.0",
+    "self-contained" : false,
+    "application"    : "diabetecarebackend",
+    "environment"    : "Diabetecarebackend-env",
+    "enable-xray"    : false,
+    "enhanced-health-type" : "basic",
+    "additional-options"   : "",
+    "proxy-server"         : "nginx"
+}

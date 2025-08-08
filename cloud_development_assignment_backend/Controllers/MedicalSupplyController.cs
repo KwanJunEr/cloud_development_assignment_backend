@@ -41,7 +41,7 @@ namespace cloud_development_assignment_backend.Controllers
                 var supply = new MedicalSupply
                 {
                     FamilyId = dto.FamilyId,
-                    PatientId = user?.PatientId,
+                    PatientId = user.PatientId.Value,
                     MedicineName = dto.MedicineName,
                     MedicineDescription = dto.MedicineDescription,
                     Quantity = dto.Quantity,

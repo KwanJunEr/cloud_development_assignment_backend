@@ -18,5 +18,7 @@ namespace cloud_development_assignment_backend.DTO
         public string? MealContext { get; set; }
         public string? Notes { get; set; }
         public string? Status { get; set; }
+
+        public string? ImageUrl { get; set; }
     }
 }

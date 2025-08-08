@@ -23,5 +23,7 @@ namespace cloud_development_assignment_backend.DTO
         public string Portion { get; set; } = string.Empty;
 
         public string? Notes { get; set; }
+
+        public string? ImageUrl { get; set; }
     }
 }

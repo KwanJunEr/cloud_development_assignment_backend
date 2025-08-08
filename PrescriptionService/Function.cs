@@ -1,4 +1,4 @@
-using Amazon.Lambda.Core;
+ using Amazon.Lambda.Core;
 using Amazon.Lambda.APIGatewayEvents;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
